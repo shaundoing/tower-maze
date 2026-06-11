@@ -1,0 +1,14 @@
+[Unit]
+Description=Tower Maze – static file server
+After=network.target
+
+[Service]
+Type=simple
+User=sean
+WorkingDirectory=/home/sean/Dev/Tower-Maze
+ExecStart=/usr/bin/python3 -m http.server 8765 --bind 127.0.0.1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tower Maze – Physics Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    canvas { display: block; }
+
+    #floor-label {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.9);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      background: rgba(0,0,0,0.45);
+      padding: 7px 18px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.12);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #reset-btn {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #reset-btn:active { background: rgba(255,255,255,0.25); }
+
+    #tilt-btn {
+      position: fixed;
+      top: 52px;
+      right: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.5);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 6px 11px;
+      border-radius: 16px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #tilt-btn.active {
+      background: rgba(100,200,100,0.2);
+      border-color: rgba(100,200,100,0.5);
+      color: #80e080;
+    }
+
+    #admin-btn {
+      position: fixed;
+      top: 92px;
+      right: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.45);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 6px 11px;
+      border-radius: 16px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #admin-btn.open {
+      background: rgba(255,160,60,0.2);
+      border-color: rgba(255,160,60,0.5);
+      color: #ffaa66;
+    }
+
+    #admin-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(14,16,22,0.97);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 28px 24px 20px;
+      width: min(300px, calc(100vw - 48px));
+      display: none;
+      z-index: 200;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    #admin-panel h2 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .sens-row { margin-bottom: 20px; }
+    .sens-row label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.72);
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .sens-row label em {
+      font-style: normal;
+      font-size: 16px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.5);
+      min-width: 28px;
+      text-align: right;
+    }
+    .sens-row input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.14);
+      outline: none;
+      cursor: pointer;
+    }
+    .sens-row input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.88);
+      cursor: pointer;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.55);
+    }
+    .sens-row input[type=range]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.88);
+      cursor: pointer;
+    }
+    #admin-done {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      color: rgba(255,255,255,0.6);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #admin-done:active { background: rgba(255,255,255,0.18); }
+
+    #map-btn {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #map-btn:active { background: rgba(255,255,255,0.25); }
+    #map-btn.open {
+      background: rgba(80,160,255,0.2);
+      border-color: rgba(80,160,255,0.55);
+      color: #7ab8ff;
+    }
+
+    #end-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    #end-screen h1 {
+      font-size: 30px;
+      font-weight: 200;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    #end-screen p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 1px;
+      margin-bottom: 36px;
+    }
+    #end-screen button {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: white;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      padding: 13px 30px;
+      border-radius: 28px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #end-screen button:active { background: rgba(255,255,255,0.25); }
+
+    #hint {
+      position: fixed;
+      bottom: 160px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.3);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      pointer-events: none;
+      white-space: nowrap;
+      transition: opacity 1s;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="floor-label">Floor 1</div>
+<button id="map-btn">MAP</button>
+<button id="reset-btn">RESET</button>
+<button id="tilt-btn">TILT: OFF</button>
+<button id="admin-btn">CFG</button>
+
+<div id="admin-panel">
+  <h2>Sensitivity</h2>
+  <div class="sens-row">
+    <label>Joystick <em id="joy-sens-val">2.5</em></label>
+    <input type="range" id="joy-sens-sl" min="0.3" max="3" step="0.1" value="2.5">
+  </div>
+  <div class="sens-row">
+    <label>Tilt <em id="tilt-sens-val">2.8</em></label>
+    <input type="range" id="tilt-sens-sl" min="0.5" max="5" step="0.1" value="2.8">
+  </div>
+  <button id="admin-done">Done</button>
+</div>
+<div id="hint">Arrow keys · Click &amp; drag · or enable Tilt</div>
+
+<div id="end-screen">
+  <h1>Tower Complete</h1>
+  <p>You unlocked the sequence and escaped through the Floor 4 exit</p>
+  <button id="play-again-btn">PLAY AGAIN</button>
+</div>
+
+<script>
+'use strict';
+
+// ================================================================
+//  PHYSICS & GAME CONFIG  ← tune all the feel values here
+// ================================================================
+const CONFIG = {
+  // Ball dynamics
+  acceleration:         400,   // px/s²  – how quickly ball builds up speed from input
+  maxSpeed:             900,   // px/s   – ball's terminal velocity
+  friction:             0.99,  // 0–1    – velocity multiplier per frame (lower = stickier floor)
+  wallBounce:           0.75,  // 0–1    – speed kept after bouncing off a wall (0=dead stop)
+
+  // Controls
+  joystickSensitivity:  2.5,   // 0–3    – scales joystick deflection → acceleration
+  joystickRadius:       60,    // px     – cursor distance from anchor for full speed
+  tiltSensitivity:      2.8,   // 0–5    – scales device tilt angle → acceleration
+  keyboardSensitivity:  1.0,   // 0–2    – scales arrow key → acceleration
+
+  // Pause / Anchor
+  pauseBraking:         0.04,  // 0–1    – velocity multiplier per frame while paused
+                               //          0 = instant stop, 0.85 = slow drift-to-stop
+
+  // Geometry
+  ballRadius:           16,    // px
+  wallThickness:        24,    // px
+  holeRadius:           26,    // px  – must be larger than ballRadius
+  doorWidth:            90,    // px  – height of the door gap in the perimeter wall
+
+  // Camera
+  cameraSmoothing:      9,     // higher = snappier follow (units: 1/s)
+
+  // ── Grid ─────────────────────────────────────────────────────
+  tileSize:             70,    // px  – play area square size (drives the grid)
+  gridLineOpacity:      0.5,  // 0–1 – grid line alpha; raise to make grid more visible
+  gridLineThickness:    1,     // px  – grid stroke width
+  gridLineColor:        '210,200,175', // RGB for rgba() – warm stone tone
+
+  // ── Platform (Floor 1 test area) ─────────────────────────────
+  platformHeight:                35,   // px  – visual elevation depth (drives shadow/face thickness)
+
+  // ── Collision sound & bounce effect ──────────────────────────
+  bounceMinSpeed:       30,    // px/s – minimum impact speed to fire sound/effect
+  bounceVolume:         0.40,  // 0–1  – collision sound master volume
+
+  // ── Debug ────────────────────────────────────────────────────
+  showSurfaceDebug:     true,  // show surface-type label while testing
+};
+// ================================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+
+let W = 0, H = 0;  // viewport size (updated on resize)
+let floors = [];
+let gs     = null; // game state
+let lastTime = null;
+
+// ── Audio ────────────────────────────────────────────────────────
+let audioCtx      = null;
+let lastBounceAt  = 0;  // ms timestamp, throttles rapid-fire sounds
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playBounceSound(impactSpeed) {
+  try {
+    const ac  = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t   = ac.currentTime;
+    const vol = Math.min(1, impactSpeed / 400) * CONFIG.bounceVolume;
+
+    // Tonal body — pitch drops quickly (physical "thud")
+    const osc     = ac.createOscillator();
+    const oscGain = ac.createGain();
+    osc.connect(oscGain);
+    oscGain.connect(ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(240 + impactSpeed * 0.18, t);
+    osc.frequency.exponentialRampToValueAtTime(70, t + 0.14);
+    oscGain.gain.setValueAtTime(vol * 0.9, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    osc.start(t);
+    osc.stop(t + 0.18);
+
+    // Sharp transient click (attack definition)
+    const click     = ac.createOscillator();
+    const clickGain = ac.createGain();
+    click.connect(clickGain);
+    clickGain.connect(ac.destination);
+    click.type = 'square';
+    click.frequency.setValueAtTime(900, t);
+    clickGain.gain.setValueAtTime(vol * 0.12, t);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.018);
+    click.start(t);
+    click.stop(t + 0.018);
+  } catch (_) {}
+}
+
+function playTriggerSound(step) {
+  // Rising chime — pitch climbs with each trigger collected (step = 1, 2, 3 …)
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t    = ac.currentTime;
+    const freq = 520 * Math.pow(2, (step - 1) * 4 / 12); // up a major 3rd per step
+    const osc  = ac.createOscillator();
+    const g    = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.30, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    osc.start(t); osc.stop(t + 0.45);
+  } catch (_) {}
+}
+
+function playUnlockSound() {
+  // Two-note resolve chord — "the way is open"
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    [[523.25, 0], [783.99, 0.09]].forEach(([f, dly]) => {
+      const osc = ac.createOscillator();
+      const g   = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, t + dly);
+      g.gain.setValueAtTime(0.0001, t + dly);
+      g.gain.exponentialRampToValueAtTime(0.26, t + dly + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dly + 0.7);
+      osc.start(t + dly); osc.stop(t + dly + 0.7);
+    });
+  } catch (_) {}
+}
+
+function playErrorSound() {
+  // Low dissonant buzz — wrong sequence, progress reset
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    [110, 116.5].forEach(f => {
+      const osc = ac.createOscillator();
+      const g   = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0.10, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      osc.start(t); osc.stop(t + 0.35);
+    });
+  } catch (_) {}
+}
+
+// ── Bounce visual effects ────────────────────────────────────────
+const bounceEffects = [];
+
+function onBounce(contactX, contactY, impactSpeed) {
+  if (impactSpeed < CONFIG.bounceMinSpeed) return;
+
+  // Visual ring — always spawned (doesn't need throttle)
+  bounceEffects.push({ x: contactX, y: contactY, life: 1.0, speed: impactSpeed });
+
+  // Sound — throttled so rapid wall-sliding doesn't spam
+  const now = performance.now();
+  if (now - lastBounceAt > 75) {
+    lastBounceAt = now;
+    playBounceSound(impactSpeed);
+  }
+}
+
+function updateBounceEffects(dt) {
+  for (let i = bounceEffects.length - 1; i >= 0; i--) {
+    bounceEffects[i].life -= dt * 6.5;   // ~0.15 s lifetime
+    if (bounceEffects[i].life <= 0) bounceEffects.splice(i, 1);
+  }
+}
+
+function drawBounceEffects(ox, oy) {
+  for (const ef of bounceEffects) {
+    const bx   = ef.x - ox;
+    const by   = ef.y - oy;
+    const age  = 1 - ef.life;                          // 0→1
+    const r    = CONFIG.ballRadius * (1 + age * 2.8);  // expanding ring
+    const lw   = 2.5 * ef.life;
+    const alpha = ef.life * 0.8;
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,255,220,${alpha.toFixed(3)})`;
+    ctx.lineWidth   = lw;
+    ctx.stroke();
+  }
+}
+
+// ── Floor data ──────────────────────────────────────────────────
+function buildFloors() {
+  const fw = Math.round(W * 5);
+  const fh = Math.round(H * 3);
+  const wt = CONFIG.wallThickness;
+  const r  = CONFIG.ballRadius;
+  const ts = CONFIG.tileSize;
+
+  // Helper: proportional point
+  const P = (px, py) => ({ x: Math.round(fw * px), y: Math.round(fh * py) });
+
+  floors = [
+    // ── Floor 1 — simple: find the hole ─────────────────────────
+    {
+      index:  0,
+      label:  'Floor 1',
+      width:  fw,
+      height: fh,
+      bgColor:        '#3d3a2d',
+      tileColor:      '#464237',
+      tileLineColor:  'rgba(0,0,0,0.09)',
+      wallColor:      '#7d7254',
+      wallHighlight:  '#b0a072',
+      wallShadow:     '#2e2b1e',
+      wallAO:         'rgba(0,0,0,0.28)',
+      hole: { ...P(0.58, 0.42), r: CONFIG.holeRadius },
+      door: null,
+      triggers: [],
+      requireSequence: false,
+      startX: wt + r + 30,
+      startY: wt + r + 30,
+      platformStructures: [{ x: wt + 2 * ts, y: wt + 2 * ts, w: 3 * ts, h: 3 * ts }],
+      innerWalls: [],
+    },
+    // ── Floor 2 — one trigger unlocks the hole ──────────────────
+    {
+      index:  1,
+      label:  'Floor 2',
+      width:  fw,
+      height: fh,
+      bgColor:        '#2a2d36',
+      tileColor:      '#31353f',
+      tileLineColor:  'rgba(0,0,0,0.12)',
+      wallColor:      '#52596e',
+      wallHighlight:  '#7888aa',
+      wallShadow:     '#191c24',
+      wallAO:         'rgba(0,0,0,0.32)',
+      hole: { ...P(0.86, 0.18), r: CONFIG.holeRadius },
+      door: null,
+      triggers: [ { id: 'f2-t1', ...P(0.14, 0.78), r: 30 } ],
+      requireSequence: false,
+      startX: 0, startY: 0,  // set below (floor 1 hole)
+      platformStructures: [],
+      innerWalls: [
+        // Vertical baffle: forces a detour around the bottom
+        { x: Math.round(fw * 0.38), y: wt, w: wt, h: Math.round(fh * 0.62) },
+        // Horizontal baffle near the hole corner
+        { x: Math.round(fw * 0.66), y: Math.round(fh * 0.40), w: Math.round(fw * 0.34) - wt, h: wt },
+      ],
+    },
+    // ── Floor 3 — two triggers, any order ────────────────────────
+    {
+      index:  2,
+      label:  'Floor 3',
+      width:  fw,
+      height: fh,
+      bgColor:        '#26332b',
+      tileColor:      '#2d3b32',
+      tileLineColor:  'rgba(0,0,0,0.12)',
+      wallColor:      '#4e6a58',
+      wallHighlight:  '#7da88a',
+      wallShadow:     '#16211a',
+      wallAO:         'rgba(0,0,0,0.32)',
+      hole: { ...P(0.10, 0.15), r: CONFIG.holeRadius },
+      door: null,
+      triggers: [
+        { id: 'f3-t1', ...P(0.13, 0.80), r: 30 },
+        { id: 'f3-t2', ...P(0.88, 0.75), r: 30 },
+      ],
+      requireSequence: false,
+      startX: 0, startY: 0,  // set below (floor 2 hole)
+      platformStructures: [],
+      innerWalls: [
+        // Horizontal shelf guarding the exit hole's quadrant
+        { x: wt, y: Math.round(fh * 0.33), w: Math.round(fw * 0.30), h: wt },
+        // Vertical baffle mid-floor
+        { x: Math.round(fw * 0.55), y: Math.round(fh * 0.38), w: wt, h: Math.round(fh * 0.62) - wt },
+      ],
+    },
+    // ── Floor 4 — three triggers in sequence unlock exit door ────
+    {
+      index:  3,
+      label:  'Floor 4',
+      width:  fw,
+      height: fh,
+      bgColor:        '#332629',
+      tileColor:      '#3b2d31',
+      tileLineColor:  'rgba(0,0,0,0.12)',
+      wallColor:      '#6a4e55',
+      wallHighlight:  '#a87d88',
+      wallShadow:     '#21161a',
+      wallAO:         'rgba(0,0,0,0.32)',
+      hole: null,
+      door: { wall: 'right', center: Math.round(fh * 0.50), width: CONFIG.doorWidth },
+      triggers: [
+        { id: 'f4-t1', order: 0, ...P(0.78, 0.18), r: 30 },
+        { id: 'f4-t2', order: 1, ...P(0.18, 0.82), r: 30 },
+        { id: 'f4-t3', order: 2, ...P(0.55, 0.50), r: 30 },
+      ],
+      requireSequence: true,
+      startX: 0, startY: 0,  // set below (floor 3 hole)
+      platformStructures: [],
+      innerWalls: [
+        // Diagonal-ish layout of baffles around the centre pad
+        { x: Math.round(fw * 0.40), y: wt, w: wt, h: Math.round(fh * 0.40) },
+        { x: Math.round(fw * 0.40), y: Math.round(fh * 0.65), w: Math.round(fw * 0.35), h: wt },
+        { x: Math.round(fw * 0.70), y: Math.round(fh * 0.30), w: wt, h: Math.round(fh * 0.35) },
+      ],
+    },
+  ];
+
+  // Each floor spawns the ball where it fell through the hole above
+  for (let i = 1; i < floors.length; i++) {
+    const above = floors[i - 1];
+    if (above.hole) {
+      floors[i].startX = above.hole.x;
+      floors[i].startY = above.hole.y;
+    }
+  }
+}
+
+// ── Surface Detection ────────────────────────────────────────────
+function getSurfaceType(ball, floor) {
+  for (const ps of (floor.platformStructures || [])) {
+    if (ball.x >= ps.x && ball.x < ps.x + ps.w &&
+        ball.y >= ps.y && ball.y < ps.y + ps.h) return 'platform';
+  }
+  return 'floor';
+}
+
+// ── Trigger puzzle logic ─────────────────────────────────────────
+function exitUnlocked(fi) {
+  const f = floors[fi];
+  if (!f.triggers || f.triggers.length === 0) return true;
+  if (f.requireSequence) return gs.seqProgress >= f.triggers.length;
+  return f.triggers.every(t => gs.activated[fi][t.id]);
+}
+
+function activatedCount(fi) {
+  const f = floors[fi];
+  return f.triggers.filter(t => gs.activated[fi][t.id]).length;
+}
+
+function fireTrigger(fi, trig) {
+  const f   = floors[fi];
+  const act = gs.activated[fi];
+  if (act[trig.id]) return;  // already lit
+
+  if (f.requireSequence) {
+    if (trig.order === gs.seqProgress) {
+      act[trig.id] = true;
+      gs.seqProgress++;
+      playTriggerSound(gs.seqProgress);
+      if (exitUnlocked(fi)) playUnlockSound();
+    } else {
+      // Wrong order — everything resets
+      for (const t of f.triggers) act[t.id] = false;
+      gs.seqProgress = 0;
+      playErrorSound();
+    }
+  } else {
+    act[trig.id] = true;
+    playTriggerSound(activatedCount(fi));
+    if (exitUnlocked(fi)) playUnlockSound();
+  }
+  updateFloorLabel();
+}
+
+function updateTriggers() {
+  const fi    = gs.floor;
+  const floor = floors[fi];
+  if (!floor.triggers || !floor.triggers.length) return;
+  const ball = gs.ball;
+  for (const t of floor.triggers) {
+    const over = Math.hypot(ball.x - t.x, ball.y - t.y) < t.r;
+    const was  = gs.inside[fi][t.id];
+    if (over && !was) fireTrigger(fi, t);   // fire on enter edge only
+    gs.inside[fi][t.id] = over;             // must roll off before it can fire again
+  }
+}
+
+// ── Game state ───────────────────────────────────────────────────
+function createGS() {
+  const f = floors[0];
+  return {
+    floor:         0,
+    ball:          { x: f.startX, y: f.startY, vx: 0, vy: 0 },
+    camera:        { x: 0, y: 0 },
+    paused:        false,
+    mapOpen:       false,
+    mapAlpha:      0,
+    transitioning: false,
+    transAlpha:    0,      // 0=clear, 1=black
+    transDir:      1,      // 1=fade-out, -1=fade-in
+    ended:         false,
+    endFade:       0,
+    surface:       'floor',
+    // Trigger puzzle state (survives buildFloors() on resize — keyed by stable ids)
+    activated:     floors.map(() => ({})),  // per-floor { triggerId: true }
+    inside:        floors.map(() => ({})),  // per-floor { triggerId: true } — ball overlap, for enter-edge detection
+    seqProgress:   0,                       // floor 4: how many sequence triggers hit in order
+  };
+}
+
+function resetGame() {
+  buildFloors();
+  gs = createGS();
+  snapCamera();
+  updateFloorLabel();
+  document.getElementById('end-screen').style.display = 'none';
+  const mapBtn = document.getElementById('map-btn');
+  mapBtn.textContent = 'MAP';
+  mapBtn.classList.remove('open');
+  lastTime = null;
+  hideHint();
+}
+
+// ── Input ────────────────────────────────────────────────────────
+const keys = { ArrowLeft:false, ArrowRight:false, ArrowUp:false, ArrowDown:false };
+
+const joy = {
+  active:  false,
+  touchId: null,
+  baseX:   0,
+  baseY:   0,
+  dx:      0,   // -1 to 1
+  dy:      0,
+};
+
+// Pause button display geometry
+const PAUSE_GFX = { cx:0, cy:0, r:32 };
+
+function resizeControls() {
+  PAUSE_GFX.cx = W - PAUSE_GFX.r - 24;
+  PAUSE_GFX.cy = H - PAUSE_GFX.r - 56;
+}
+
+function setJoystickFromPos(tx, ty) {
+  const dx  = tx - joy.baseX;
+  const dy  = ty - joy.baseY;
+  const len = Math.hypot(dx, dy);
+  const max = CONFIG.joystickRadius;
+  if (len < 6) { joy.dx = 0; joy.dy = 0; return; }
+  const clamped = Math.min(len, max);
+  joy.dx = (dx / len) * (clamped / max);
+  joy.dy = (dy / len) * (clamped / max);
+}
+
+// Touch
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  hideHint();
+  for (const t of e.changedTouches) {
+    const tx = t.clientX, ty = t.clientY;
+
+    // Pause button hit test
+    if (Math.hypot(tx - PAUSE_GFX.cx, ty - PAUSE_GFX.cy) < PAUSE_GFX.r + 12) {
+      if (gs) gs.paused = !gs.paused;
+      continue;
+    }
+
+    // Any non-pause touch becomes the joystick anchor
+    if (!joy.active) {
+      joy.active  = true;
+      joy.touchId = t.identifier;
+      joy.baseX   = tx;
+      joy.baseY   = ty;
+      joy.dx      = 0;
+      joy.dy      = 0;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joy.touchId) setJoystickFromPos(t.clientX, t.clientY);
+  }
+}, { passive: false });
+
+function touchEndHandler(e) {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joy.touchId) {
+      joy.active = false; joy.touchId = null; joy.dx = 0; joy.dy = 0;
+    }
+  }
+}
+canvas.addEventListener('touchend',    touchEndHandler, { passive: false });
+canvas.addEventListener('touchcancel', touchEndHandler, { passive: false });
+
+// Mouse (desktop)
+let mouseDragging = false;
+canvas.addEventListener('mousedown', e => {
+  hideHint();
+  const mx = e.clientX, my = e.clientY;
+  if (Math.hypot(mx - PAUSE_GFX.cx, my - PAUSE_GFX.cy) < PAUSE_GFX.r + 12) {
+    if (gs) gs.paused = !gs.paused;
+    return;
+  }
+  // Set anchor at click position — VS-style
+  mouseDragging = true;
+  joy.active    = true;
+  joy.baseX     = mx;
+  joy.baseY     = my;
+  joy.dx        = 0;
+  joy.dy        = 0;
+});
+window.addEventListener('mousemove', e => {
+  if (mouseDragging) setJoystickFromPos(e.clientX, e.clientY);
+});
+window.addEventListener('mouseup', () => {
+  mouseDragging = false;
+  joy.active = false;
+  joy.dx = 0;
+  joy.dy = 0;
+});
+
+// Keyboard
+window.addEventListener('keydown', e => {
+  if (e.key in keys) { keys[e.key] = true; hideHint(); }
+  if (e.key === ' ')                   { if (gs) gs.paused = !gs.paused; }
+  if (e.key === 'r' || e.key === 'R')  resetGame();
+});
+window.addEventListener('keyup', e => {
+  if (e.key in keys) keys[e.key] = false;
+});
+
+// Device tilt
+const tilt = { enabled: false, x: 0, y: 0, betaOffset: null, usingMotion: false };
+
+// Small debug overlay — visible while tilt is on so sensor state is always readable
+const tiltDbg = { el: null };
+function showTiltDebug(text) {
+  if (!tiltDbg.el) {
+    tiltDbg.el = document.createElement('div');
+    Object.assign(tiltDbg.el.style, {
+      position: 'fixed', bottom: '8px', right: '8px',
+      background: 'rgba(0,0,0,0.65)', color: 'rgba(255,255,255,0.65)',
+      fontFamily: 'monospace', fontSize: '10px',
+      padding: '4px 8px', borderRadius: '8px',
+      pointerEvents: 'none', zIndex: '999', whiteSpace: 'nowrap',
+    });
+    document.body.appendChild(tiltDbg.el);
+  }
+  tiltDbg.el.textContent = text;
+}
+function hideTiltDebug() {
+  if (tiltDbg.el) { tiltDbg.el.remove(); tiltDbg.el = null; }
+}
+
+function applyScreenAngle(rawGammaOrX, rawBetaOrY) {
+  const angle = screen.orientation?.angle ?? window.orientation ?? 0;
+  if (angle === 90)                        return [  rawBetaOrY, -rawGammaOrX ];
+  if (angle === -90 || angle === 270)      return [ -rawBetaOrY,  rawGammaOrX ];
+  if (Math.abs(angle) === 180)             return [ -rawGammaOrX, -rawBetaOrY ];
+  return [ rawGammaOrX, rawBetaOrY ];
+}
+
+function onOrientation(e) {
+  // Null values mean no gyroscope — fall back to accelerometer
+  if (e.gamma === null && e.beta === null) {
+    window.removeEventListener('deviceorientation', onOrientation);
+    window.addEventListener('devicemotion', onMotion, { passive: true });
+    tilt.usingMotion = true;
+    showTiltDebug('no gyro — trying accelerometer…');
+    return;
+  }
+
+  const [rawX, rawY] = applyScreenAngle(e.gamma || 0, e.beta || 0);
+  if (tilt.betaOffset === null) tilt.betaOffset = rawY;
+
+  const MAX_ANGLE = 28;
+  tilt.x = Math.max(-1, Math.min(1,  rawX / MAX_ANGLE));
+  tilt.y = Math.max(-1, Math.min(1, (rawY - tilt.betaOffset) / MAX_ANGLE));
+
+  const g = (e.gamma || 0).toFixed(0), b = (e.beta || 0).toFixed(0);
+  showTiltDebug(`gyro γ${g} β${b} → ${tilt.x.toFixed(2)}, ${tilt.y.toFixed(2)}`);
+}
+
+function onMotion(e) {
+  const acc = e.accelerationIncludingGravity;
+  if (!acc || acc.x === null) { showTiltDebug('NO SENSOR DATA'); return; }
+
+  // Gravity vector gives tilt angle: sin(θ) ≈ a / g
+  const [rawX, rawY] = applyScreenAngle(
+    ( acc.x || 0) / 9.81,
+    (-acc.y || 0) / 9.81   // y axis is inverted vs gamma convention
+  );
+
+  if (tilt.betaOffset === null) tilt.betaOffset = rawY;
+  tilt.x = Math.max(-1, Math.min(1, rawX));
+  tilt.y = Math.max(-1, Math.min(1, rawY - tilt.betaOffset));
+
+  showTiltDebug(`accel x${(acc.x||0).toFixed(1)} y${(acc.y||0).toFixed(1)} → ${tilt.x.toFixed(2)}, ${tilt.y.toFixed(2)}`);
+}
+
+function enableTilt() {
+  const btn = document.getElementById('tilt-btn');
+  if (tilt.enabled) {
+    tilt.enabled = false;
+    tilt.usingMotion = false;
+    btn.textContent = 'TILT: OFF';
+    btn.classList.remove('active');
+    window.removeEventListener('deviceorientation', onOrientation);
+    window.removeEventListener('devicemotion', onMotion);
+    hideTiltDebug();
+    return;
+  }
+  function startListening() {
+    tilt.enabled    = true;
+    tilt.usingMotion = false;
+    tilt.betaOffset = null;
+    btn.textContent = 'TILT: ON';
+    btn.classList.add('active');
+    showTiltDebug('waiting for sensor…');
+    window.addEventListener('deviceorientation', onOrientation);
+  }
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(s => { if (s === 'granted') startListening(); });
+  } else {
+    startListening();
+  }
+}
+
+// Re-calibrate when screen rotates
+window.addEventListener('orientationchange', () => { if (tilt.enabled) tilt.betaOffset = null; });
+if (screen.orientation) {
+  screen.orientation.addEventListener('change', () => { if (tilt.enabled) tilt.betaOffset = null; });
+}
+
+// ── Physics ──────────────────────────────────────────────────────
+function updatePhysics(dt) {
+  if (!gs || gs.transitioning || gs.ended) return;
+
+  const ball  = gs.ball;
+  const floor = floors[gs.floor];
+  const wt    = CONFIG.wallThickness;
+  const r     = CONFIG.ballRadius;
+
+  // Surface detection (always current, even while paused)
+  gs.surface = getSurfaceType(ball, floor);
+
+  if (gs.paused || gs.mapOpen) {
+    // Anchor: brake the ball
+    ball.vx *= CONFIG.pauseBraking;
+    ball.vy *= CONFIG.pauseBraking;
+    if (Math.abs(ball.vx) < 0.5) ball.vx = 0;
+    if (Math.abs(ball.vy) < 0.5) ball.vy = 0;
+    return;
+  }
+
+  // ── Gather input — analog inputs scale with deflection/tilt magnitude
+  let ax = 0, ay = 0;
+
+  if (joy.active) {
+    ax += joy.dx * CONFIG.joystickSensitivity;
+    ay += joy.dy * CONFIG.joystickSensitivity;
+  }
+  if (tilt.enabled) {
+    ax += tilt.x * CONFIG.tiltSensitivity;
+    ay += tilt.y * CONFIG.tiltSensitivity;
+  }
+
+  // Keyboard: normalize diagonal so it isn't faster than cardinal
+  const kx = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0);
+  const ky = (keys.ArrowDown  ? 1 : 0) - (keys.ArrowUp   ? 1 : 0);
+  const kLen = Math.hypot(kx, ky);
+  if (kLen > 0) {
+    ax += (kx / kLen) * CONFIG.keyboardSensitivity;
+    ay += (ky / kLen) * CONFIG.keyboardSensitivity;
+  }
+  // No further normalisation — analog magnitude is intentional; maxSpeed is the ceiling
+
+  ball.vx += ax * CONFIG.acceleration * dt;
+  ball.vy += ay * CONFIG.acceleration * dt;
+
+  // Speed cap
+  const spd = Math.hypot(ball.vx, ball.vy);
+  if (spd > CONFIG.maxSpeed) {
+    ball.vx = (ball.vx / spd) * CONFIG.maxSpeed;
+    ball.vy = (ball.vy / spd) * CONFIG.maxSpeed;
+  }
+
+  // Friction (applied before move so we can still build speed each frame)
+  ball.vx *= CONFIG.friction;
+  ball.vy *= CONFIG.friction;
+
+  // Integrate position
+  ball.x += ball.vx * dt;
+  ball.y += ball.vy * dt;
+
+  // ── Wall collisions ──────────────────────────────────────────
+  // Left wall
+  if (ball.x - r < wt) {
+    const imp = Math.abs(ball.vx);
+    ball.x  = wt + r;
+    ball.vx = imp * CONFIG.wallBounce;
+    onBounce(wt, ball.y, imp);
+  }
+  // Top wall
+  if (ball.y - r < wt) {
+    const imp = Math.abs(ball.vy);
+    ball.y  = wt + r;
+    ball.vy = imp * CONFIG.wallBounce;
+    onBounce(ball.x, wt, imp);
+  }
+  // Bottom wall
+  if (ball.y + r > floor.height - wt) {
+    const imp = Math.abs(ball.vy);
+    ball.y  = floor.height - wt - r;
+    ball.vy = -imp * CONFIG.wallBounce;
+    onBounce(ball.x, floor.height - wt, imp);
+  }
+  // Right wall (with door gap on floor 2)
+  const rightInner = floor.width - wt;
+  if (ball.x + r > rightInner) {
+    const door = floor.door;
+    if (door && door.wall === 'right' && exitUnlocked(gs.floor)) {
+      const inGap = ball.y > door.center - door.width / 2 &&
+                    ball.y < door.center + door.width / 2;
+      if (inGap) {
+        triggerEnd();
+        return;
+      }
+    }
+    const imp = Math.abs(ball.vx);
+    ball.x  = rightInner - r;
+    ball.vx = -imp * CONFIG.wallBounce;
+    onBounce(rightInner, ball.y, imp);
+  }
+
+  // ── Platform & inner-wall collisions ──────────────────────────
+  const solids = [...(floor.platformStructures || []), ...(floor.innerWalls || [])];
+  for (const ps of solids) {
+    // Closest point on platform rect to ball center
+    const cx   = Math.max(ps.x, Math.min(ball.x, ps.x + ps.w));
+    const cy   = Math.max(ps.y, Math.min(ball.y, ps.y + ps.h));
+    const dx   = ball.x - cx;
+    const dy   = ball.y - cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 0 && dist < r) {
+      const nx   = dx / dist;
+      const ny   = dy / dist;
+      // Push ball out of platform
+      ball.x = cx + nx * r;
+      ball.y = cy + ny * r;
+      // Reflect velocity along collision normal
+      const vdn = ball.vx * nx + ball.vy * ny;
+      if (vdn < 0) {
+        ball.vx -= (1 + CONFIG.wallBounce) * vdn * nx;
+        ball.vy -= (1 + CONFIG.wallBounce) * vdn * ny;
+        onBounce(cx, cy, Math.abs(vdn));
+      }
+    }
+  }
+
+  // ── Trigger pads ────────────────────────────────────────────
+  updateTriggers();
+
+  // ── Hole check — only swallows the ball once unlocked ────────
+  if (floor.hole && exitUnlocked(gs.floor)) {
+    const d = Math.hypot(ball.x - floor.hole.x, ball.y - floor.hole.y);
+    if (d < floor.hole.r - r * 0.4) {
+      triggerTransition();
+    }
+  }
+}
+
+// ── Transitions ──────────────────────────────────────────────────
+const FADE_SPEED = 2.8; // alpha units per second
+
+function triggerTransition() {
+  if (gs.transitioning) return;
+  gs.transitioning = true;
+  gs.transDir      = 1;   // start fading out
+  gs.transAlpha    = 0;
+}
+
+function updateTransition(dt) {
+  if (!gs.transitioning) return;
+  gs.transAlpha += gs.transDir * FADE_SPEED * dt;
+
+  if (gs.transDir === 1 && gs.transAlpha >= 1) {
+    gs.transAlpha = 1;
+    gs.transDir   = -1;  // now fade back in
+    // Descend to the next floor
+    gs.floor = Math.min(gs.floor + 1, floors.length - 1);
+    const f   = floors[gs.floor];
+    gs.ball.x = f.startX;
+    gs.ball.y = f.startY;
+    gs.ball.vx = 0;
+    gs.ball.vy = 0;
+    snapCamera();
+    updateFloorLabel();
+  } else if (gs.transDir === -1 && gs.transAlpha <= 0) {
+    gs.transAlpha  = 0;
+    gs.transitioning = false;
+  }
+}
+
+function triggerEnd() {
+  if (gs.ended) return;
+  gs.ended   = true;
+  gs.endFade = 0;
+}
+
+function updateEndFade(dt) {
+  if (!gs.ended) return;
+  gs.endFade = Math.min(1, gs.endFade + FADE_SPEED * dt);
+  if (gs.endFade >= 1) {
+    document.getElementById('end-screen').style.display = 'flex';
+  }
+}
+
+// ── Camera ───────────────────────────────────────────────────────
+function snapCamera() {
+  const f   = floors[gs.floor];
+  const tx  = Math.max(0, Math.min(gs.ball.x - W/2, f.width  - W));
+  const ty  = Math.max(0, Math.min(gs.ball.y - H/2, f.height - H));
+  gs.camera.x = tx;
+  gs.camera.y = ty;
+}
+
+function updateCamera(dt) {
+  const f   = floors[gs.floor];
+  const tx  = Math.max(0, Math.min(gs.ball.x - W/2, f.width  - W));
+  const ty  = Math.max(0, Math.min(gs.ball.y - H/2, f.height - H));
+  const t   = 1 - Math.exp(-CONFIG.cameraSmoothing * dt);
+  gs.camera.x += (tx - gs.camera.x) * t;
+  gs.camera.y += (ty - gs.camera.y) * t;
+}
+
+// ── Drawing ───────────────────────────────────────────────────────
+
+// Floor tile grid
+function drawTiles(floor, ox, oy) {
+  const ts = CONFIG.tileSize;
+  ctx.strokeStyle = `rgba(${CONFIG.gridLineColor},${CONFIG.gridLineOpacity})`;
+  ctx.lineWidth   = CONFIG.gridLineThickness;
+  const startGX = Math.floor(ox / ts) * ts - ox;
+  const startGY = Math.floor(oy / ts) * ts - oy;
+  ctx.beginPath();
+  for (let gx = startGX; gx <= W + ts; gx += ts) {
+    ctx.moveTo(gx, 0); ctx.lineTo(gx, H);
+  }
+  for (let gy = startGY; gy <= H + ts; gy += ts) {
+    ctx.moveTo(0, gy); ctx.lineTo(W, gy);
+  }
+  ctx.stroke();
+}
+
+// Single wall rectangle with raised-3D shading
+function drawWallRect(floor, wx, wy, ww, wh, ox, oy) {
+  const x = wx - ox, y = wy - oy;
+  if (x + ww < -2 || x > W + 2 || y + wh < -2 || y > H + 2) return; // cull
+
+  const HL = 5; // highlight strip thickness
+
+  // Main body
+  ctx.fillStyle = floor.wallColor;
+  ctx.fillRect(x, y, ww, wh);
+
+  // Top highlight
+  ctx.fillStyle = floor.wallHighlight;
+  ctx.fillRect(x, y, ww, HL);
+
+  // Left highlight
+  ctx.fillRect(x, y + HL, HL, wh - HL);
+
+  // Bottom shadow
+  ctx.fillStyle = floor.wallShadow;
+  ctx.fillRect(x, y + wh - HL, ww, HL);
+
+  // Right shadow
+  ctx.fillRect(x + ww - HL, y + HL, HL, wh - HL * 2);
+}
+
+// Ambient-occlusion strip (inner edge of walls)
+function drawWallAO(floor, ox, oy) {
+  const wt  = CONFIG.wallThickness;
+  const AOW = 8;
+  ctx.fillStyle = floor.wallAO;
+
+  // Right of left wall
+  ctx.fillRect(wt - ox, wt - oy, AOW, floor.height - wt * 2);
+  // Left of right wall
+  ctx.fillRect(floor.width - wt - AOW - ox, wt - oy, AOW, floor.height - wt * 2);
+  // Below top wall
+  ctx.fillRect(wt - ox, wt - oy, floor.width - wt * 2, AOW);
+  // Above bottom wall
+  ctx.fillRect(wt - ox, floor.height - wt - AOW - oy, floor.width - wt * 2, AOW);
+}
+
+function drawHole(hole, ox, oy, locked) {
+  const hx = hole.x - ox;
+  const hy = hole.y - oy;
+  const r  = hole.r;
+
+  // Recessed dark pit with radial gradient
+  const grad = ctx.createRadialGradient(hx - r * 0.25, hy - r * 0.25, 1, hx, hy, r);
+  grad.addColorStop(0,   '#161410');
+  grad.addColorStop(0.5, '#0c0b09');
+  grad.addColorStop(1,   '#000000');
+
+  ctx.beginPath();
+  ctx.arc(hx, hy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Outer shadow rim (depth illusion)
+  ctx.beginPath();
+  ctx.arc(hx, hy, r + 3, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth   = 5;
+  ctx.stroke();
+
+  if (locked) {
+    // Grate bars covering the pit
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(hx, hy, r, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(150,150,160,0.75)';
+    ctx.lineWidth   = 4;
+    ctx.beginPath();
+    for (let off = -r; off <= r; off += r * 0.5) {
+      ctx.moveTo(hx + off, hy - r);
+      ctx.lineTo(hx + off, hy + r);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Red "locked" rim (pulsing)
+    const pulse = 0.45 + 0.25 * Math.sin(Date.now() / 300);
+    ctx.beginPath();
+    ctx.arc(hx, hy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,70,60,${pulse.toFixed(3)})`;
+    ctx.lineWidth   = 2.5;
+    ctx.stroke();
+    return;
+  }
+
+  // Gold/yellow warning rim
+  ctx.beginPath();
+  ctx.arc(hx, hy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,200,60,0.5)';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+
+  // Tiny highlight dot (top-left)
+  ctx.beginPath();
+  ctx.arc(hx - r * 0.35, hy - r * 0.35, r * 0.18, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fill();
+}
+
+// Trigger pad — circular floor plate; lights up green once activated
+function drawTrigger(t, floor, ox, oy) {
+  const fi     = floor.index;
+  const tx     = t.x - ox;
+  const ty     = t.y - oy;
+  if (tx + t.r < 0 || tx - t.r > W || ty + t.r < 0 || ty - t.r > H) return;
+  const active = !!gs.activated[fi][t.id];
+  const pulse  = 0.5 + 0.5 * Math.sin(Date.now() / 350);
+
+  // Recessed plate base
+  ctx.beginPath();
+  ctx.arc(tx, ty, t.r, 0, Math.PI * 2);
+  ctx.fillStyle = active ? 'rgba(40,90,55,0.95)' : 'rgba(0,0,0,0.30)';
+  ctx.fill();
+
+  if (active) {
+    // Glow halo
+    const glow = ctx.createRadialGradient(tx, ty, t.r * 0.4, tx, ty, t.r * 2.1);
+    glow.addColorStop(0, 'rgba(90,255,140,0.30)');
+    glow.addColorStop(1, 'rgba(90,255,140,0)');
+    ctx.beginPath();
+    ctx.arc(tx, ty, t.r * 2.1, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+  }
+
+  // Ring
+  ctx.beginPath();
+  ctx.arc(tx, ty, t.r, 0, Math.PI * 2);
+  ctx.strokeStyle = active
+    ? 'rgba(110,255,160,0.95)'
+    : `rgba(90,200,255,${(0.35 + pulse * 0.4).toFixed(3)})`;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Inner ring detail
+  ctx.beginPath();
+  ctx.arc(tx, ty, t.r * 0.62, 0, Math.PI * 2);
+  ctx.strokeStyle = active ? 'rgba(110,255,160,0.5)' : 'rgba(90,200,255,0.22)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Label — sequence floors show required order; others show a dot
+  ctx.save();
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  if (floor.requireSequence) {
+    ctx.font      = 'bold 18px "Helvetica Neue", Helvetica, Arial, sans-serif';
+    ctx.fillStyle = active ? 'rgba(220,255,230,0.95)' : 'rgba(255,255,255,0.55)';
+    ctx.fillText(String(t.order + 1), tx, ty + 1);
+  } else {
+    ctx.beginPath();
+    ctx.arc(tx, ty, 5, 0, Math.PI * 2);
+    ctx.fillStyle = active ? 'rgba(220,255,230,0.95)' : 'rgba(255,255,255,0.4)';
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawPlatformStructure(ps, floor, ox, oy) {
+  const ph = CONFIG.platformHeight;
+  const px = ps.x - ox;
+  const py = ps.y - oy;
+  const pw = ps.w;
+  const ph2 = ps.h;
+
+  // Cull entirely off-screen
+  if (px + pw < 0 || px > W || py + ph2 < 0 || py > H) return;
+
+  const SDIST = Math.round(ph * 0.55);
+  const FACE  = Math.max(6, Math.round(ph * 0.38));
+
+  // ─── Cast shadow (bottom-right offset, drawn first) ──────────
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.fillRect(px + SDIST, py + SDIST, pw, ph2);
+
+  // ─── Platform surface ────────────────────────────────────────
+  ctx.fillStyle = '#5d5848';
+  ctx.fillRect(px, py, pw, ph2);
+
+  // Interior radial highlight (elevated = catches more top-light)
+  const sg = ctx.createRadialGradient(
+    px + pw * 0.3, py + ph2 * 0.3, 0,
+    px + pw * 0.5, py + ph2 * 0.5, pw * 0.72
+  );
+  sg.addColorStop(0, 'rgba(255,248,210,0.11)');
+  sg.addColorStop(1, 'rgba(255,248,210,0)');
+  ctx.fillStyle = sg;
+  ctx.fillRect(px, py, pw, ph2);
+
+  // Left edge highlight (light source from top-left)
+  const leh = ctx.createLinearGradient(px, 0, px + 9, 0);
+  leh.addColorStop(0, 'rgba(255,248,210,0.28)');
+  leh.addColorStop(1, 'rgba(255,248,210,0)');
+  ctx.fillStyle = leh;
+  ctx.fillRect(px, py, 9, ph2);
+
+  // Top edge highlight
+  ctx.fillStyle = 'rgba(255,248,210,0.20)';
+  ctx.fillRect(px, py, pw, 4);
+
+  // Right edge shadow
+  const rsh = ctx.createLinearGradient(px + pw - 9, 0, px + pw, 0);
+  rsh.addColorStop(0, 'rgba(0,0,0,0)');
+  rsh.addColorStop(1, 'rgba(0,0,0,0.22)');
+  ctx.fillStyle = rsh;
+  ctx.fillRect(px + pw - 9, py, 9, ph2);
+
+  // Bottom edge shadow (subtle darkening before the face)
+  const bsh = ctx.createLinearGradient(0, py + ph2 - 6, 0, py + ph2);
+  bsh.addColorStop(0, 'rgba(0,0,0,0)');
+  bsh.addColorStop(1, 'rgba(0,0,0,0.18)');
+  ctx.fillStyle = bsh;
+  ctx.fillRect(px, py + ph2 - 6, pw, 6);
+
+  // ─── South face (depth strip at bottom edge) ─────────────────
+  ctx.fillStyle = floor.wallShadow;
+  ctx.fillRect(px, py + ph2, pw, FACE);
+  // Hard shadow line at base of face
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(px - 1, py + ph2 + FACE - 1, pw + SDIST + 2, 2);
+
+  // ─── East face (depth strip at right edge) ───────────────────
+  const eastFace = ctx.createLinearGradient(px + pw, 0, px + pw + FACE, 0);
+  eastFace.addColorStop(0, floor.wallShadow);
+  eastFace.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = eastFace;
+  ctx.fillRect(px + pw, py, FACE, ph2 + FACE);
+
+  // ─── Outer border ────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(255,248,210,0.15)';
+  ctx.lineWidth   = 1;
+  ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph2 - 1);
+
+  // ─── Grid overlay (matches floor grid) ───────────────────────
+  const ts = CONFIG.tileSize;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(px, py, pw, ph2); ctx.clip();
+  ctx.strokeStyle = `rgba(${CONFIG.gridLineColor},${CONFIG.gridLineOpacity * 0.5})`;
+  ctx.lineWidth   = CONFIG.gridLineThickness;
+  const sgx = Math.floor(ps.x / ts) * ts - ox;
+  const sgy = Math.floor(ps.y / ts) * ts - oy;
+  ctx.beginPath();
+  for (let gx = sgx; gx <= px + pw + ts; gx += ts) {
+    ctx.moveTo(gx, py); ctx.lineTo(gx, py + ph2);
+  }
+  for (let gy = sgy; gy <= py + ph2 + ts; gy += ts) {
+    ctx.moveTo(px, gy); ctx.lineTo(px + pw, gy);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawDoor(floor, ox, oy, locked) {
+  const door = floor.door;
+  const wt   = CONFIG.wallThickness;
+  let dx, dy, dw, dh;
+
+  if (door.wall === 'right') {
+    dx = floor.width - wt;
+    dy = door.center - door.width / 2;
+    dw = wt;
+    dh = door.width;
+  }
+
+  const sx = dx - ox, sy = dy - oy;
+
+  if (locked) {
+    // Sealed door — dark slab with red pulsing frame
+    ctx.fillStyle = '#2a1418';
+    ctx.fillRect(sx, sy, dw, dh);
+
+    // Bar details
+    ctx.fillStyle = 'rgba(120,60,60,0.6)';
+    for (let by = sy + 8; by < sy + dh - 6; by += 16) {
+      ctx.fillRect(sx + 3, by, dw - 6, 4);
+    }
+
+    const pulse = 0.4 + 0.3 * Math.sin(Date.now() / 300);
+    const FRAME = 4;
+    ctx.fillStyle = `rgba(255,70,60,${pulse.toFixed(3)})`;
+    ctx.fillRect(sx, sy - FRAME, dw, FRAME);
+    ctx.fillRect(sx, sy + dh, dw, FRAME);
+    ctx.fillRect(sx - FRAME, sy - FRAME, FRAME, dh + FRAME * 2);
+
+    ctx.save();
+    ctx.fillStyle    = `rgba(255,120,110,${(0.6 + pulse * 0.4).toFixed(3)})`;
+    ctx.font         = 'bold 9px "Helvetica Neue", Helvetica, Arial, sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.translate(sx + dw / 2, sy + dh / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('LOCKED', 0, 0);
+    ctx.restore();
+    return;
+  }
+
+  // Erase the wall gap with a bright "beyond" colour
+  ctx.fillStyle = '#ffe080';
+  ctx.fillRect(sx, sy, dw, dh);
+
+  // Inner glow
+  const grad = ctx.createLinearGradient(sx, 0, sx + dw, 0);
+  grad.addColorStop(0,   'rgba(255,240,160,0.9)');
+  grad.addColorStop(0.5, 'rgba(255,255,220,1)');
+  grad.addColorStop(1,   'rgba(255,220,80,0.4)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(sx, sy, dw, dh);
+
+  // Frame (drawn in wall-space above/below gap)
+  const FRAME = 4;
+  ctx.fillStyle = '#ffcc22';
+  ctx.fillRect(sx, sy - FRAME, dw, FRAME);              // top bar
+  ctx.fillRect(sx, sy + dh, dw, FRAME);                 // bottom bar
+  ctx.fillRect(sx - FRAME, sy - FRAME, FRAME, dh + FRAME * 2); // left bar
+
+  // "EXIT" label
+  ctx.save();
+  ctx.fillStyle = '#6b4400';
+  ctx.font = 'bold 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('EXIT', sx + dw / 2, sy + dh / 2);
+  ctx.restore();
+
+  // Glow cast onto floor
+  const glow = ctx.createLinearGradient(sx - 80, 0, sx, 0);
+  glow.addColorStop(0, 'rgba(255,230,80,0)');
+  glow.addColorStop(1, 'rgba(255,230,80,0.18)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(sx - 80, sy, 80, dh);
+}
+
+function drawFloor(floor, ox, oy) {
+  const wt = CONFIG.wallThickness;
+
+  // Background fill for entire floor (clamped to viewport)
+  ctx.fillStyle = floor.tileColor;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  drawTiles(floor, ox, oy);
+
+  // Trigger pads (under everything raised — they're set into the floor)
+  for (const t of (floor.triggers || [])) {
+    drawTrigger(t, floor, ox, oy);
+  }
+
+  // Platform structures (after grid, before walls so walls render on top)
+  for (const ps of (floor.platformStructures || [])) {
+    drawPlatformStructure(ps, floor, ox, oy);
+  }
+
+  // Inner maze walls
+  for (const iw of (floor.innerWalls || [])) {
+    drawWallRect(floor, iw.x, iw.y, iw.w, iw.h, ox, oy);
+  }
+
+  // Perimeter walls
+  // Top
+  drawWallRect(floor, 0, 0, floor.width, wt, ox, oy);
+  // Bottom
+  drawWallRect(floor, 0, floor.height - wt, floor.width, wt, ox, oy);
+  // Left
+  drawWallRect(floor, 0, 0, wt, floor.height, ox, oy);
+  // Right wall — split around door gap if present
+  if (floor.door && floor.door.wall === 'right') {
+    const door    = floor.door;
+    const gapTop  = door.center - door.width / 2;
+    const gapBot  = door.center + door.width / 2;
+    drawWallRect(floor, floor.width - wt, 0,      wt, gapTop,               ox, oy);
+    drawWallRect(floor, floor.width - wt, gapBot,  wt, floor.height - gapBot, ox, oy);
+  } else {
+    drawWallRect(floor, floor.width - wt, 0, wt, floor.height, ox, oy);
+  }
+
+  // AO (drawn after walls so it sits on top)
+  drawWallAO(floor, ox, oy);
+
+  // Features
+  const unlocked = exitUnlocked(floor.index);
+  if (floor.hole) drawHole(floor.hole, ox, oy, !unlocked);
+  if (floor.door) drawDoor(floor, ox, oy, !unlocked);
+}
+
+function drawBall(ball, ox, oy) {
+  const bx = ball.x - ox;
+  const by = ball.y - oy;
+  const r  = CONFIG.ballRadius;
+
+  // Elliptical drop shadow
+  ctx.beginPath();
+  ctx.ellipse(bx + 4, by + 6, r * 0.75, r * 0.38, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.fill();
+
+  // Ball body — warm off-white marble gradient
+  const body = ctx.createRadialGradient(bx - r * 0.32, by - r * 0.32, 0, bx, by, r);
+  body.addColorStop(0,    '#e8e2d4');
+  body.addColorStop(0.35, '#cfc6af');
+  body.addColorStop(0.72, '#a09070');
+  body.addColorStop(1,    '#5a5040');
+
+  ctx.beginPath();
+  ctx.arc(bx, by, r, 0, Math.PI * 2);
+  ctx.fillStyle = body;
+  ctx.fill();
+
+  // Bright specular highlight (top-left catch light)
+  const spec = ctx.createRadialGradient(bx - r * 0.28, by - r * 0.38, 0, bx - r * 0.15, by - r * 0.15, r * 0.6);
+  spec.addColorStop(0,   'rgba(255,255,255,0.92)');
+  spec.addColorStop(0.35,'rgba(255,255,255,0.35)');
+  spec.addColorStop(1,   'rgba(255,255,255,0)');
+
+  ctx.beginPath();
+  ctx.arc(bx, by, r, 0, Math.PI * 2);
+  ctx.fillStyle = spec;
+  ctx.fill();
+
+  // Thin rim
+  ctx.beginPath();
+  ctx.arc(bx, by, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+}
+
+function drawJoystickHUD() {
+  if (!joy.active) return;
+
+  const bx  = joy.baseX;
+  const by  = joy.baseY;
+  const MAX = CONFIG.joystickRadius;
+  const hx  = bx + joy.dx * MAX;
+  const hy  = by + joy.dy * MAX;
+  const mag = Math.hypot(joy.dx, joy.dy);
+
+  // Max-range ring (shows input boundary)
+  ctx.beginPath();
+  ctx.arc(bx, by, MAX, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+
+  // Line from anchor to handle
+  if (mag > 0.05) {
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(hx, hy);
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+  }
+
+  // Anchor dot
+  ctx.beginPath();
+  ctx.arc(bx, by, 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fill();
+
+  // Handle dot (brightens with deflection magnitude)
+  ctx.beginPath();
+  ctx.arc(hx, hy, 13, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(255,255,255,${(0.22 + mag * 0.18).toFixed(2)})`;
+  ctx.fill();
+  ctx.strokeStyle = `rgba(255,255,255,${(0.35 + mag * 0.25).toFixed(2)})`;
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+}
+
+function drawPauseHUD() {
+  const { cx, cy, r } = PAUSE_GFX;
+  const paused = gs && gs.paused;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle   = paused ? 'rgba(255,185,0,0.30)' : 'rgba(255,255,255,0.09)';
+  ctx.fill();
+  ctx.strokeStyle = paused ? 'rgba(255,185,0,0.75)' : 'rgba(255,255,255,0.22)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle    = paused ? '#ffb800' : 'rgba(255,255,255,0.65)';
+  ctx.font         = 'bold 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(paused ? 'GO' : 'HOLD', cx, cy);
+  ctx.textBaseline = 'alphabetic';
+}
+
+function toggleMap() {
+  if (!gs || gs.ended) return;
+  gs.mapOpen = !gs.mapOpen;
+  const btn = document.getElementById('map-btn');
+  btn.textContent = gs.mapOpen ? 'RESUME' : 'MAP';
+  btn.classList.toggle('open', gs.mapOpen);
+}
+
+function drawMapOverlay(alpha) {
+  const floor  = floors[gs.floor];
+  const PAD    = 28;
+  const HDR    = 44;   // header height (title)
+  const LEG    = 32;   // legend height below map
+
+  const availW = W - PAD * 2;
+  const availH = H - PAD * 2 - HDR - LEG;
+  const scale  = Math.min(availW / floor.width, availH / floor.height);
+
+  const mapW = floor.width  * scale;
+  const mapH = floor.height * scale;
+  const mapX = Math.round((W - mapW) / 2);
+  const mapY = Math.round(PAD + HDR);
+  const wt   = Math.max(2, CONFIG.wallThickness * scale);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Dark scrim
+  ctx.fillStyle = 'rgba(0,0,0,0.86)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Panel background
+  ctx.fillStyle = 'rgba(18,20,28,0.97)';
+  ctx.fillRect(mapX - 10, mapY - 10, mapW + 20, mapH + 20 + LEG);
+
+  // Floor field
+  ctx.fillStyle = floor.tileColor;
+  ctx.fillRect(mapX, mapY, mapW, mapH);
+
+  // Subtle tile grid on map
+  ctx.strokeStyle = floor.tileLineColor;
+  ctx.lineWidth   = 0.5;
+  const gridStep = Math.round(CONFIG.tileSize * scale);
+  if (gridStep > 4) {
+    ctx.beginPath();
+    for (let gx = mapX; gx <= mapX + mapW; gx += gridStep) {
+      ctx.moveTo(gx, mapY); ctx.lineTo(gx, mapY + mapH);
+    }
+    for (let gy = mapY; gy <= mapY + mapH; gy += gridStep) {
+      ctx.moveTo(mapX, gy); ctx.lineTo(mapX + mapW, gy);
+    }
+    ctx.stroke();
+  }
+
+  // Walls — helper to fill a wall rect
+  function mwall(wx, wy, ww, wh) {
+    ctx.fillStyle = floor.wallColor;
+    ctx.fillRect(mapX + wx * scale, mapY + wy * scale, ww * scale, wh * scale);
+  }
+  const fw = floor.width, fh = floor.height, WT = CONFIG.wallThickness;
+  const unlocked = exitUnlocked(gs.floor);
+  mwall(0, 0, fw, WT);                    // top
+  mwall(0, fh - WT, fw, WT);             // bottom
+  mwall(0, 0, WT, fh);                   // left
+  if (floor.door && floor.door.wall === 'right') {
+    const gapTop = floor.door.center - floor.door.width / 2;
+    const gapBot = floor.door.center + floor.door.width / 2;
+    mwall(fw - WT, 0,      WT, gapTop);
+    mwall(fw - WT, gapBot, WT, fh - gapBot);
+    // Door gap highlight — gold when open, red when sealed
+    ctx.fillStyle = unlocked ? '#ffcc22' : '#cc3333';
+    ctx.fillRect(mapX + (fw - WT) * scale, mapY + gapTop * scale,
+                 Math.max(wt, 3), (gapBot - gapTop) * scale);
+  } else {
+    mwall(fw - WT, 0, WT, fh);           // right (solid)
+  }
+
+  // Inner maze walls
+  for (const iw of (floor.innerWalls || [])) {
+    mwall(iw.x, iw.y, iw.w, iw.h);
+  }
+
+  // Trigger pads
+  for (const t of (floor.triggers || [])) {
+    const txm = mapX + t.x * scale;
+    const tym = mapY + t.y * scale;
+    const trm = Math.max(4, t.r * scale);
+    const active = !!gs.activated[gs.floor][t.id];
+    ctx.beginPath();
+    ctx.arc(txm, tym, trm, 0, Math.PI * 2);
+    ctx.fillStyle = active ? 'rgba(90,220,130,0.9)' : 'rgba(20,30,40,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = active ? 'rgba(140,255,180,1)' : 'rgba(90,200,255,0.8)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+    if (floor.requireSequence) {
+      ctx.fillStyle    = active ? 'rgba(10,30,15,0.9)' : 'rgba(255,255,255,0.7)';
+      ctx.font         = `bold ${Math.max(8, Math.round(trm * 1.1))}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(t.order + 1), txm, tym + 0.5);
+    }
+  }
+
+  // Hole
+  if (floor.hole) {
+    const hx = mapX + floor.hole.x * scale;
+    const hy = mapY + floor.hole.y * scale;
+    const hr = Math.max(5, floor.hole.r * scale);
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+    ctx.fillStyle = '#050403';
+    ctx.fill();
+    ctx.strokeStyle = unlocked ? 'rgba(255,200,60,0.7)' : 'rgba(255,80,70,0.85)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+  }
+
+  // Camera viewport rect (dashed — shows what's currently visible)
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.strokeRect(
+    mapX + gs.camera.x * scale,
+    mapY + gs.camera.y * scale,
+    W * scale,
+    H * scale
+  );
+  ctx.setLineDash([]);
+
+  // Ball marker (pulsing ring + dot)
+  const bx  = mapX + gs.ball.x * scale;
+  const by  = mapY + gs.ball.y * scale;
+  const br  = Math.max(5, CONFIG.ballRadius * scale);
+  const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 280);
+  ctx.beginPath();
+  ctx.arc(bx, by, br + pulse * 4, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(255,255,255,${0.28 * pulse})`;
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bx, by, br, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // Start position crosshair
+  ctx.strokeStyle = 'rgba(100,220,100,0.4)';
+  ctx.lineWidth   = 1;
+  const sx = mapX + floor.startX * scale;
+  const sy = mapY + floor.startY * scale;
+  ctx.beginPath();
+  ctx.moveTo(sx - 5, sy); ctx.lineTo(sx + 5, sy);
+  ctx.moveTo(sx, sy - 5); ctx.lineTo(sx, sy + 5);
+  ctx.stroke();
+
+  // Title
+  ctx.fillStyle    = 'rgba(255,255,255,0.88)';
+  ctx.font         = '600 13px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(floor.label.toUpperCase() + ' — MAP', W / 2, PAD + HDR / 2);
+
+  // Legend row
+  const legY = mapY + mapH + LEG / 2;
+  ctx.font         = '11px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign    = 'left';
+  let lx = mapX + 4;
+
+  // You (ball)
+  ctx.beginPath();
+  ctx.arc(lx + 5, legY, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('You', lx + 14, legY);
+  lx += 52;
+
+  // Start
+  ctx.strokeStyle = 'rgba(100,220,100,0.6)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.moveTo(lx, legY); ctx.lineTo(lx + 10, legY);
+  ctx.moveTo(lx + 5, legY - 5); ctx.lineTo(lx + 5, legY + 5);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('Start', lx + 14, legY);
+  lx += 58;
+
+  if (floor.triggers && floor.triggers.length) {
+    ctx.beginPath();
+    ctx.arc(lx + 5, legY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20,30,40,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(90,200,255,0.8)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('Trigger', lx + 14, legY);
+    lx += 68;
+  }
+
+  if (floor.hole) {
+    ctx.beginPath();
+    ctx.arc(lx + 5, legY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#050403';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,60,0.8)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('Hole', lx + 14, legY);
+    lx += 52;
+  }
+
+  if (floor.door) {
+    ctx.fillStyle = '#ffcc22';
+    ctx.fillRect(lx, legY - 5, 8, 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('Exit', lx + 12, legY);
+  }
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+}
+
+function drawFadeOverlay() {
+  let alpha = 0;
+  if (gs.transitioning) alpha = gs.transAlpha;
+  if (gs.ended)         alpha = Math.max(alpha, gs.endFade);
+  if (alpha <= 0) return;
+  ctx.fillStyle = `rgba(0,0,0,${alpha.toFixed(3)})`;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ── UI helpers ───────────────────────────────────────────────────
+function updateFloorLabel() {
+  const f = floors[gs.floor];
+  let txt = f.label;
+  if (f.triggers && f.triggers.length) {
+    const n = f.requireSequence ? gs.seqProgress : activatedCount(gs.floor);
+    if (exitUnlocked(gs.floor)) {
+      txt += '  ·  UNLOCKED';
+    } else {
+      txt += `  ·  ${n}/${f.triggers.length}` + (f.requireSequence ? ' IN ORDER' : ' TRIGGERS');
+    }
+  }
+  document.getElementById('floor-label').textContent = txt;
+}
+
+let hintVisible = true;
+function hideHint() {
+  if (!hintVisible) return;
+  hintVisible = false;
+  const el = document.getElementById('hint');
+  if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 1100); }
+}
+
+// ── Resize ───────────────────────────────────────────────────────
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width  = W;
+  canvas.height = H;
+  resizeControls();
+  buildFloors();
+  if (gs) {
+    // Clamp ball inside new floor, snap camera
+    const f = floors[gs.floor];
+    const wt = CONFIG.wallThickness, r = CONFIG.ballRadius;
+    gs.ball.x = Math.max(wt + r, Math.min(gs.ball.x, f.width  - wt - r));
+    gs.ball.y = Math.max(wt + r, Math.min(gs.ball.y, f.height - wt - r));
+    snapCamera();
+    updateFloorLabel();
+  }
+}
+
+// ── Main loop ────────────────────────────────────────────────────
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (!gs) return;
+
+  const dt = lastTime ? Math.min((now - lastTime) / 1000, 0.05) : 0;
+  lastTime = now;
+
+  // Animate map overlay in/out
+  const MAP_SPEED = 5;
+  if (gs.mapOpen)       gs.mapAlpha = Math.min(1, gs.mapAlpha + MAP_SPEED * dt);
+  else                  gs.mapAlpha = Math.max(0, gs.mapAlpha - MAP_SPEED * dt);
+
+  updateBounceEffects(dt);
+  updateTransition(dt);
+  updateEndFade(dt);
+  if (!gs.ended) updatePhysics(dt);
+  if (!gs.mapOpen) updateCamera(dt);
+
+  // ── Render
+  const floor = floors[gs.floor];
+  const ox    = gs.camera.x;
+  const oy    = gs.camera.y;
+
+  // bg
+  ctx.fillStyle = floor.bgColor;
+  ctx.fillRect(0, 0, W, H);
+
+  drawFloor(floor, ox, oy);
+  drawBall(gs.ball, ox, oy);
+  drawBounceEffects(ox, oy);
+
+  // Surface debug label
+  if (CONFIG.showSurfaceDebug && gs.surface !== undefined) {
+    const SURF_LABELS  = { floor: 'Floor', platform: 'Platform' };
+    const SURF_COLORS  = { floor: 'rgba(255,255,255,0.42)', platform: '#88ddff' };
+    const txt   = SURF_LABELS[gs.surface] || gs.surface;
+    const color = SURF_COLORS[gs.surface] || 'white';
+    ctx.save();
+    ctx.font         = 'bold 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(txt).width + 22;
+    const lx = W / 2, ly = 64;
+    ctx.fillStyle = 'rgba(0,0,0,0.48)';
+    ctx.fillRect(lx - tw / 2, ly - 11, tw, 22);
+    ctx.fillStyle = color;
+    ctx.fillText(txt, lx, ly);
+    ctx.restore();
+  }
+
+  drawJoystickHUD();
+  drawPauseHUD();
+  if (gs.mapAlpha > 0) drawMapOverlay(gs.mapAlpha);
+  drawFadeOverlay();
+}
+
+// ── Sensitivity admin ────────────────────────────────────────────
+function initAdmin() {
+  const saved = JSON.parse(localStorage.getItem('tmSens') || '{}');
+  if (saved.joy  != null) CONFIG.joystickSensitivity = saved.joy;
+  if (saved.tilt != null) CONFIG.tiltSensitivity     = saved.tilt;
+
+  const joySl   = document.getElementById('joy-sens-sl');
+  const tiltSl  = document.getElementById('tilt-sens-sl');
+  const joyVal  = document.getElementById('joy-sens-val');
+  const tiltVal = document.getElementById('tilt-sens-val');
+
+  joySl.value  = CONFIG.joystickSensitivity;
+  tiltSl.value = CONFIG.tiltSensitivity;
+  joyVal.textContent  = CONFIG.joystickSensitivity.toFixed(1);
+  tiltVal.textContent = CONFIG.tiltSensitivity.toFixed(1);
+
+  function save() {
+    localStorage.setItem('tmSens', JSON.stringify({ joy: CONFIG.joystickSensitivity, tilt: CONFIG.tiltSensitivity }));
+  }
+
+  joySl.addEventListener('input', () => {
+    CONFIG.joystickSensitivity = parseFloat(joySl.value);
+    joyVal.textContent = CONFIG.joystickSensitivity.toFixed(1);
+    save();
+  });
+  tiltSl.addEventListener('input', () => {
+    CONFIG.tiltSensitivity = parseFloat(tiltSl.value);
+    tiltVal.textContent = CONFIG.tiltSensitivity.toFixed(1);
+    save();
+  });
+
+  document.getElementById('admin-btn').addEventListener('click', toggleAdmin);
+  document.getElementById('admin-done').addEventListener('click', toggleAdmin);
+}
+
+function toggleAdmin() {
+  const panel = document.getElementById('admin-panel');
+  const btn   = document.getElementById('admin-btn');
+  const open  = panel.style.display !== 'block';
+  panel.style.display = open ? 'block' : 'none';
+  btn.classList.toggle('open', open);
+  if (gs) gs.paused = open;
+}
+
+// ── Bootstrap ────────────────────────────────────────────────────
+window.addEventListener('resize', resize);
+
+document.getElementById('reset-btn').addEventListener('click', resetGame);
+document.getElementById('play-again-btn').addEventListener('click', resetGame);
+document.getElementById('tilt-btn').addEventListener('click', enableTilt);
+document.getElementById('map-btn').addEventListener('click', toggleMap);
+
+resize();
+initAdmin();
+gs = createGS();
+updateFloorLabel();
+snapCamera();
+requestAnimationFrame(loop);
+</script>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "1ee4fae2db864f6fa25d35f1130e2dfa"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

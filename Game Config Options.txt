@@ -1,0 +1,46 @@
+Current CONFIG block in the game:
+
+  Ball dynamics
+  - acceleration — how quickly speed builds from input
+  - maxSpeed — top speed cap
+  - friction — how quickly the ball slows when no input
+  - wallBounce — how much speed is kept after hitting a wall
+
+  Controls
+  - joystickSensitivity — finger/mouse input strength
+  - joystickRadius — how far you drag for full speed
+  - tiltSensitivity — gyro input strength
+  - keyboardSensitivity — arrow key input strength
+
+  Pause / Anchor
+  - pauseBraking — how quickly ball stops when paused/held
+
+  Geometry
+  - ballRadius
+  - wallThickness
+  - holeRadius
+  - doorWidth
+
+  Camera
+  - cameraSmoothing — how snappily the camera follows the ball
+
+  Grid
+  - gridLineOpacity
+  - gridLineThickness
+  - gridLineColor
+  - tileSize — the play area square size (affects floor size)
+
+  Platform
+  - platformHeight — depth of the shadow/face shading
+
+  Collision sound & bounce effect
+  - bounceMinSpeed — minimum impact speed to trigger sound/flash
+  - bounceVolume — collision sound volume
+
+  Debug
+  - showSurfaceDebug — shows Floor / Platform label on screen
+
+  The in-game SENS panel only exposes joystick and tilt sensitivity. Everything
+  else has to be edited directly in CONFIG at the top of index.html (around line
+   304).
+
