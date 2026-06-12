@@ -10,7 +10,7 @@ Every milestone is kept as a separately playable demo for a dev log:
 2. When a version is finished: `cp index.html versions/vN/index.html`, add an entry to `versions/index.html` (the launcher page), commit, `git tag vN`, then **push with tags automatically** (`git push --follow-tags`) — the user has asked for the push to happen without asking.
 3. Never modify files under `versions/` except the launcher page — they are frozen snapshots.
 
-Current latest: **v7**. Remote: `git@github.com:shaundoing/tower-maze.git` (SSH key `~/.ssh/id_ed25519_github`).
+Current latest: **v8**. Remote: `git@github.com:shaundoing/tower-maze.git` (SSH key `~/.ssh/id_ed25519_github`).
 
 ## Running / testing
 
