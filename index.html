@@ -1612,11 +1612,21 @@ function setJoystickFromPos(tx, ty) {
   if (len < 6) { joy.dx = 0; joy.dy = 0; return; }
   const clamped = Math.min(len, max);
   if (CONFIG.joystickSnap8) {
-    // Snap direction to the nearest 45° so corridors are easy to track
-    // (camera turns in 90° steps, so these always align with the maze)
-    const ang = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
-    joy.dx = Math.cos(ang) * (clamped / max);
-    joy.dy = Math.sin(ang) * (clamped / max);
+    // Snap to the 8 world-grid directions (axes + diagonals), then steer
+    // along their screen projections — so the snapped headings match the
+    // grid lines the player sees, not abstract 45° screen angles
+    const [wx, wy] = screenDirToWorld(dx, dy);
+    const ang = Math.round(Math.atan2(wy, wx) / (Math.PI / 4)) * (Math.PI / 4);
+    const swx = Math.cos(ang), swy = Math.sin(ang);
+    // world dir → screen dir (same mapping as isoProject's ground plane)
+    const a  = viewAngle();
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const rx = swx * ca - swy * sa;
+    const ry = swx * sa + swy * ca;
+    const sx = rx - ry, sy = (rx + ry) * ISO_Y;
+    const slen = Math.hypot(sx, sy) || 1;
+    joy.dx = (sx / slen) * (clamped / max);
+    joy.dy = (sy / slen) * (clamped / max);
   } else {
     joy.dx = (dx / len) * (clamped / max);
     joy.dy = (dy / len) * (clamped / max);
