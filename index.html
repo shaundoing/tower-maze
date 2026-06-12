@@ -462,6 +462,18 @@
       <label>Brake Boost <em id="brake-val">2.2</em></label>
       <input type="range" id="brake-sl" min="1" max="4" step="0.1" value="2.2">
     </div>
+    <div class="sens-row">
+      <label>Steering Response <em id="joy-resp-val">8.0</em></label>
+      <input type="range" id="joy-resp-sl" min="2" max="20" step="0.5" value="8">
+    </div>
+    <div class="sens-row">
+      <label>Diagonal Speed <em id="diag-speed-val">0.90</em></label>
+      <input type="range" id="diag-speed-sl" min="0.5" max="1.2" step="0.05" value="0.9">
+    </div>
+    <div class="sens-row">
+      <label>Diagonal Response <em id="diag-resp-val">1.2</em></label>
+      <input type="range" id="diag-resp-sl" min="0.5" max="2" step="0.1" value="1.2">
+    </div>
     <button id="adv-reset">Reset Advanced</button>
   </div>
   <button id="admin-done">Done</button>
@@ -507,11 +519,19 @@ const CONFIG = {
   wallBounce:           0.75,  // 0–1    – speed kept after bouncing off a wall (0=dead stop)
 
   // Controls
-  joystickSensitivity:  2.5,   // 0–3    – scales joystick deflection → acceleration
+  joystickSensitivity:  2.5,   // 0.3–3  – shapes deflection→speed curve (2.5 = linear;
+                               //          lower = finer control at small deflections)
   joystickRadius:       60,    // px     – cursor distance from anchor for full speed
   joystickSnap8:        true,  // snap mouse/touch steering to 8 directions (tilt stays analog)
   tiltSensitivity:      2.8,   // 0–5    – scales device tilt angle → acceleration
   keyboardSensitivity:  1.0,   // 0–2    – scales arrow key → acceleration
+
+  // Joystick direct drive: deflection sets a TARGET SPEED the ball
+  // converges on (small drag = slow crawl, centre = stop) — unlike tilt,
+  // which applies physical thrust. Surface traction scales the response.
+  joyResponse:          8,     // 1/s    – convergence rate toward the target speed
+  joyDiagSpeed:         0.9,   // ×      – diagonal top speed (a touch slower for corners)
+  joyDiagResponse:      1.2,   // ×      – diagonal convergence (a touch snappier for corners)
 
   // Pause / Anchor
   pauseBraking:         0.04,  // 0–1    – velocity multiplier per frame while paused
@@ -1895,12 +1915,21 @@ function updatePhysics(dt) {
 
   gs.runTime += dt;
 
-  // ── Gather input — analog inputs scale with deflection/tilt magnitude
+  // ── Gather input
+  // Joystick (mouse/touch) is handled separately as direct drive;
+  // tilt and keys remain physical thrust and share ax/ay.
   let ax = 0, ay = 0;
+  let joyMag = 0, jwx = 0, jwy = 0;   // joystick: magnitude + world direction
+  const joyDrive = joy.active;        // servo runs while held, even centred (active brake)
 
   if (joy.active) {
-    ax += joy.dx * CONFIG.joystickSensitivity;
-    ay += joy.dy * CONFIG.joystickSensitivity;
+    const defl = Math.min(1, Math.hypot(joy.dx, joy.dy));
+    if (defl > 0.001) {
+      // Sensitivity shapes the deflection→speed curve: 2.5 = linear,
+      // lower values flatten the low end for finer close-range control
+      joyMag = Math.pow(defl, 2.5 / Math.max(0.3, CONFIG.joystickSensitivity));
+      [jwx, jwy] = screenDirToWorld(joy.dx / defl, joy.dy / defl);
+    }
   }
   if (tilt.enabled) {
     ax += tilt.x * CONFIG.tiltSensitivity;
@@ -1947,8 +1976,8 @@ function updatePhysics(dt) {
   const accelMul    = feel ? feel.accel : 1;
 
   if (inLen > 0.01) {
-    // Steering against current motion brakes harder than it accelerates,
-    // so reversing direction feels responsive instead of mushy.
+    // Tilt/keys thrust. Steering against current motion brakes harder
+    // than it accelerates, so reversing feels responsive instead of mushy.
     // Low-traction surfaces (ice) skip the boost: you ride your momentum.
     const spd0 = Math.hypot(ball.vx, ball.vy);
     let boost = 1;
@@ -1958,6 +1987,20 @@ function updatePhysics(dt) {
     }
     ball.vx += ax * CONFIG.acceleration * accelMul * boost * dt;
     ball.vy += ay * CONFIG.acceleration * accelMul * boost * dt;
+  }
+
+  if (joyDrive) {
+    // Joystick direct drive: converge on deflection × top speed — and on
+    // a target of zero while held centred, so the ball stops on a dime.
+    // Diagonals (odd 45° octants) get their own speed/response tuning
+    // so cornering between grid directions is a little more forgiving.
+    const oct  = Math.round(Math.atan2(jwy, jwx) / (Math.PI / 4));
+    const diag = joyMag > 0 && (oct & 1) !== 0;
+    const tv   = CONFIG.maxSpeed * capMul * joyMag * (diag ? CONFIG.joyDiagSpeed : 1);
+    const rate = CONFIG.joyResponse * accelMul * (diag ? CONFIG.joyDiagResponse : 1);
+    const k    = 1 - Math.exp(-rate * dt);
+    ball.vx += (jwx * tv - ball.vx) * k;
+    ball.vy += (jwy * tv - ball.vy) * k;
   }
 
   // Speed cap
@@ -1972,7 +2015,7 @@ function updatePhysics(dt) {
   // Idle friction is stronger so the ball settles when you let go;
   // frictionMul keeps ice slick / mud sticky in both cases.
   // Exponent makes the decay frame-rate independent (values are 60fps refs).
-  const base = inLen > 0.01 ? CONFIG.friction : CONFIG.idleFriction;
+  const base = (inLen > 0.01 || joyDrive) ? CONFIG.friction : CONFIG.idleFriction;
   const fr = Math.pow(Math.max(0, 1 - (1 - base) * frictionMul), dt * 60);
   ball.vx *= fr;
   ball.vy *= fr;
@@ -3470,7 +3513,8 @@ function initAdmin() {
   }
   // Code defaults for the advanced feel values, captured before saved
   // overrides land, so Reset Advanced restores them
-  const advKeys = ['acceleration', 'maxSpeed', 'friction', 'idleFriction', 'brakeBoost'];
+  const advKeys = ['acceleration', 'maxSpeed', 'friction', 'idleFriction', 'brakeBoost',
+                   'joyResponse', 'joyDiagSpeed', 'joyDiagResponse'];
   const advDefaults = {};
   for (const k of advKeys) advDefaults[k] = CONFIG[k];
 
@@ -3485,6 +3529,9 @@ function initAdmin() {
   if (saved.idleFric != null) CONFIG.idleFriction        = saved.idleFric;
   if (saved.brake    != null) CONFIG.brakeBoost          = saved.brake;
   if (saved.snap8    != null) CONFIG.joystickSnap8       = saved.snap8;
+  if (saved.joyResp  != null) CONFIG.joyResponse         = saved.joyResp;
+  if (saved.diagSpd  != null) CONFIG.joyDiagSpeed        = saved.diagSpd;
+  if (saved.diagResp != null) CONFIG.joyDiagResponse     = saved.diagResp;
 
   function save() {
     localStorage.setItem('tmSettings', JSON.stringify({
@@ -3499,6 +3546,9 @@ function initAdmin() {
       idleFric: CONFIG.idleFriction,
       brake:    CONFIG.brakeBoost,
       snap8:    CONFIG.joystickSnap8,
+      joyResp:  CONFIG.joyResponse,
+      diagSpd:  CONFIG.joyDiagSpeed,
+      diagResp: CONFIG.joyDiagResponse,
     }));
   }
 
@@ -3514,6 +3564,9 @@ function initAdmin() {
     ['fric-sl',       'fric-val',       'friction',            3],
     ['idle-fric-sl',  'idle-fric-val',  'idleFriction',        3],
     ['brake-sl',      'brake-val',      'brakeBoost',          1],
+    ['joy-resp-sl',   'joy-resp-val',   'joyResponse',         1],
+    ['diag-speed-sl', 'diag-speed-val', 'joyDiagSpeed',        2],
+    ['diag-resp-sl',  'diag-resp-val',  'joyDiagResponse',     1],
   ];
   function refreshSliders() {
     for (const [slId, valId, key, dec] of sliders) {
