@@ -2589,13 +2589,9 @@ function drawFloorBase(floor) {
   }
   ctx.stroke();
 
-  // Second pass for pit tiles: re-fill black (covers floor grid on surface)
-  // then draw depth faces — no grid lines, pure void.
+  // Second pass for pit tiles: re-fill black to cover the floor grid on pit surfaces.
   if (floor.tiles) {
-    const ts2   = CONFIG.tileSize;
-    const cols2 = floor.width  / ts2;
-    const rows2 = floor.height / ts2;
-    const DEPTH = 56;
+    const ts2 = CONFIG.tileSize;
     for (const key in floor.tiles) {
       if (floor.tiles[key] !== 'pit') continue;
       const ci = key.indexOf(',');
@@ -2603,36 +2599,9 @@ function drawFloorBase(floor) {
       const x0 = c * ts2, y0 = r * ts2;
       const p  = isoProject(x0 + ts2 / 2, y0 + ts2 / 2, 0);
       if (p.x < -150 || p.x > W + 150 || p.y < -120 || p.y > H + 120) continue;
-
-      // Re-fill surface black (hides grid lines on pit tiles)
       isoQuadPath([[x0, y0], [x0 + ts2, y0], [x0 + ts2, y0 + ts2], [x0, y0 + ts2]], 0);
       ctx.fillStyle = '#070707';
       ctx.fill();
-
-      // Depth faces on edges where a solid tile borders this pit tile
-      const solid2 = (dc, dr) => {
-        const c2 = c + dc, r2 = r + dr;
-        if (c2 < 0 || r2 < 0 || c2 >= cols2 || r2 >= rows2) return false;
-        return floor.tiles[c2 + ',' + r2] !== 'pit';
-      };
-      const faces = [
-        { pts: [[x0, y0], [x0, y0 + ts2]],              test: solid2(-1, 0) }, // west
-        { pts: [[x0 + ts2, y0], [x0 + ts2, y0 + ts2]], test: solid2(1,  0) }, // east
-        { pts: [[x0, y0], [x0 + ts2, y0]],              test: solid2(0, -1) }, // north
-        { pts: [[x0, y0 + ts2], [x0 + ts2, y0 + ts2]], test: solid2(0,  1) }, // south
-      ];
-      for (const e of faces) {
-        if (!e.test) continue;
-        const [wx0, wy0] = e.pts[0], [wx1, wy1] = e.pts[1];
-        const tl = isoProject(wx0, wy0, 0),      tr = isoProject(wx1, wy1, 0);
-        const bl = isoProject(wx0, wy0, -DEPTH), br = isoProject(wx1, wy1, -DEPTH);
-        ctx.beginPath();
-        ctx.moveTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y);
-        ctx.lineTo(br.x, br.y); ctx.lineTo(bl.x, bl.y);
-        ctx.closePath();
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fill();
-      }
     }
   }
 }

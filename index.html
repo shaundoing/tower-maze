@@ -847,8 +847,8 @@ function buildTestLevel(name) {
     // ── Switch: bottom-left, in the same zone as the gap row ─────
     f.launcherSwitches.push(mkLauncherSwitch(f, 2 * ts / fw, 12 * ts / fh));
 
-    // ── Magnet pickup: near start so the player grabs it first ───
-    f.pickups.push({ id: 'test-mag', type: 'magnet', x: 6 * ts, y: 2.5 * ts });
+    // ── Magnet pickup: mid-left area, south of the start zone ───
+    f.pickups.push({ id: 'test-mag', type: 'magnet', x: 5 * ts, y: 7 * ts });
   }
 }
 
@@ -2569,66 +2569,8 @@ function drawFloorBase(floor) {
                      [x0 + ts * 0.7, y0 + ts * 0.7], [x0 + ts * 0.3, y0 + ts * 0.7]], 0);
         ctx.fillStyle = `rgba(255,${Math.round(160 + 60 * g)},60,${(0.35 + 0.4 * g).toFixed(3)})`;
         ctx.fill();
-      } else if (type === 'pit') {
-        // Inner edge shadow ring on the ground plane
-        isoQuadPath([[x0, y0], [x0 + ts, y0], [x0 + ts, y0 + ts], [x0, y0 + ts]], 0);
-        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-        ctx.lineWidth   = 3;
-        ctx.stroke();
-
-        // Vertical faces on edges where a solid tile meets the pit.
-        // Draws a stone wall face going DOWN into the hole, with a
-        // grid line marking each tile row on the face.
-        // Camera sits NW of the scene looking SE (isoDepth = wx+wy grows SE).
-        // For a N-S chasm the player sees depth going down on both the near
-        // (west) edge and the far (east) edge. For an E-W chasm the player
-        // sees the south and north edges. Draw the two pairs.
-        const DEPTH = 56;
-        const cols  = floor.width  / ts;
-        const rows  = floor.height / ts;
-        const solidInterior = (dc, dr) => {
-          const c2 = c + dc, r2 = r + dr;
-          if (c2 < 0 || r2 < 0 || c2 >= cols || r2 >= rows) return false;
-          return floor.tiles[c2 + ',' + r2] !== 'pit';
-        };
-        const camFaces = [
-          { pts: [[x0, y0], [x0, y0 + ts]],            test: solidInterior(-1, 0) }, // west
-          { pts: [[x0 + ts, y0], [x0 + ts, y0 + ts]], test: solidInterior(1,  0) }, // east
-          { pts: [[x0, y0], [x0 + ts, y0]],            test: solidInterior(0, -1) }, // north
-          { pts: [[x0, y0 + ts], [x0 + ts, y0 + ts]], test: solidInterior(0,  1) }, // south
-        ];
-        for (const e of camFaces) {
-          if (!e.test) continue;
-          const [wx0, wy0] = e.pts[0], [wx1, wy1] = e.pts[1];
-          // Filled face
-          ctx.beginPath();
-          const tl = isoProject(wx0, wy0, 0),  tr = isoProject(wx1, wy1, 0);
-          const bl = isoProject(wx0, wy0, -DEPTH), br = isoProject(wx1, wy1, -DEPTH);
-          ctx.moveTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y);
-          ctx.lineTo(br.x, br.y); ctx.lineTo(bl.x, bl.y);
-          ctx.closePath();
-          ctx.fillStyle = '#1e1e1e';
-          ctx.fill();
-          // Grid lines matching the floor grid
-          ctx.strokeStyle = `rgba(${CONFIG.gridLineColor},${CONFIG.gridLineOpacity})`;
-          ctx.lineWidth   = CONFIG.gridLineThickness;
-          ctx.beginPath();
-          // Horizontal bands (one per tile depth)
-          for (let d = 0; d <= DEPTH; d += ts) {
-            const la = isoProject(wx0, wy0, -d), lb = isoProject(wx1, wy1, -d);
-            ctx.moveTo(la.x, la.y); ctx.lineTo(lb.x, lb.y);
-          }
-          // Vertical columns along the face
-          const steps = Math.round(Math.hypot(wx1 - wx0, wy1 - wy0) / ts);
-          for (let s = 0; s <= steps; s++) {
-            const t  = s / steps;
-            const wx = wx0 + (wx1 - wx0) * t, wy = wy0 + (wy1 - wy0) * t;
-            const pa = isoProject(wx, wy, 0), pb = isoProject(wx, wy, -DEPTH);
-            ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y);
-          }
-          ctx.stroke();
-        }
       }
+      // pit: surface filled black above; faces drawn after the floor grid
     }
   }
 
@@ -2646,6 +2588,22 @@ function drawFloorBase(floor) {
     ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
   }
   ctx.stroke();
+
+  // Second pass for pit tiles: re-fill black to cover the floor grid on pit surfaces.
+  if (floor.tiles) {
+    const ts2 = CONFIG.tileSize;
+    for (const key in floor.tiles) {
+      if (floor.tiles[key] !== 'pit') continue;
+      const ci = key.indexOf(',');
+      const c  = +key.slice(0, ci), r = +key.slice(ci + 1);
+      const x0 = c * ts2, y0 = r * ts2;
+      const p  = isoProject(x0 + ts2 / 2, y0 + ts2 / 2, 0);
+      if (p.x < -150 || p.x > W + 150 || p.y < -120 || p.y > H + 120) continue;
+      isoQuadPath([[x0, y0], [x0 + ts2, y0], [x0 + ts2, y0 + ts2], [x0, y0 + ts2]], 0);
+      ctx.fillStyle = '#070707';
+      ctx.fill();
+    }
+  }
 }
 
 // Solid box standing on the ground plane — walls, platforms, doors.
