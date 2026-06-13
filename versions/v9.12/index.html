@@ -1,0 +1,4093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tower Maze – Physics Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    canvas { display: block; }
+
+    #floor-label {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.9);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      background: rgba(0,0,0,0.45);
+      padding: 7px 18px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.12);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #timer-label {
+      position: fixed;
+      top: 58px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.55);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      font-variant-numeric: tabular-nums;
+      background: rgba(0,0,0,0.35);
+      padding: 4px 14px;
+      border-radius: 18px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #reset-btn {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #reset-btn:active { background: rgba(255,255,255,0.25); }
+
+    #tilt-btn {
+      position: fixed;
+      top: 52px;
+      right: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.5);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 6px 11px;
+      border-radius: 16px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #tilt-btn.active {
+      background: rgba(100,200,100,0.2);
+      border-color: rgba(100,200,100,0.5);
+      color: #80e080;
+    }
+
+    #admin-btn {
+      position: fixed;
+      top: 92px;
+      right: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.45);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 6px 11px;
+      border-radius: 16px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #admin-btn.open {
+      background: rgba(255,160,60,0.2);
+      border-color: rgba(255,160,60,0.5);
+      color: #ffaa66;
+    }
+
+    #admin-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(14,16,22,0.97);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 28px 24px 20px;
+      width: min(300px, calc(100vw - 48px));
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+      display: none;
+      z-index: 200;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    #admin-panel h2 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .sens-row { margin-bottom: 20px; }
+    .sens-row label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.72);
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .sens-row label em {
+      font-style: normal;
+      font-size: 16px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.5);
+      min-width: 28px;
+      text-align: right;
+    }
+    .check-row label { margin-bottom: 0; }
+    .check-row input[type=checkbox] {
+      width: 20px;
+      height: 20px;
+      accent-color: rgba(255,255,255,0.88);
+      cursor: pointer;
+    }
+    .sens-row input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.14);
+      outline: none;
+      cursor: pointer;
+    }
+    .sens-row input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.88);
+      cursor: pointer;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.55);
+    }
+    .sens-row input[type=range]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.88);
+      cursor: pointer;
+    }
+    #admin-done {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      color: rgba(255,255,255,0.6);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #admin-done:active { background: rgba(255,255,255,0.18); }
+    #adv-toggle {
+      display: block;
+      width: 100%;
+      margin: 4px 0 16px;
+      padding: 8px 0;
+      background: none;
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.40);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-align: left;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #adv-toggle:active { color: rgba(255,255,255,0.7); }
+    #adv-arrow { display: inline-block; transition: transform 0.15s; }
+    #adv-toggle.open #adv-arrow { transform: rotate(90deg); }
+    #adv-section { display: none; }
+    #adv-section.open { display: block; }
+    #adv-reset {
+      display: block;
+      width: 100%;
+      margin-bottom: 16px;
+      padding: 9px;
+      background: none;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 12px;
+      color: rgba(255,255,255,0.45);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #adv-reset:active { background: rgba(255,255,255,0.12); }
+
+    #map-btn {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #map-btn:active { background: rgba(255,255,255,0.25); }
+    #map-btn.open {
+      background: rgba(80,160,255,0.2);
+      border-color: rgba(80,160,255,0.55);
+      color: #7ab8ff;
+    }
+
+    .rot-btn {
+      position: fixed;
+      bottom: 16px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8);
+      font-size: 20px;
+      line-height: 1;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .rot-btn:active { background: rgba(255,255,255,0.25); }
+    #rot-left-btn  { left: 12px; }
+    #rot-right-btn { left: 64px; }
+
+    #end-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    #end-screen h1 {
+      font-size: 30px;
+      font-weight: 200;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    #end-screen p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 1px;
+      margin-bottom: 36px;
+    }
+    #end-screen #end-time {
+      margin-top: -22px;
+      color: #ffd87a;
+      font-weight: 600;
+      letter-spacing: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    #end-screen button {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: white;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      padding: 13px 30px;
+      border-radius: 28px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #end-screen button:active { background: rgba(255,255,255,0.25); }
+
+    #death-screen, #title-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      z-index: 300;
+    }
+    #death-screen h1, #title-screen h1 {
+      font-size: 30px;
+      font-weight: 200;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    #death-screen h1 { color: #ff7a5c; }
+    #death-screen p, #title-screen p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 1px;
+      margin-bottom: 36px;
+    }
+    #death-screen button, #title-screen button {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: white;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      padding: 13px 30px;
+      border-radius: 28px;
+      cursor: pointer;
+      touch-action: manipulation;
+      margin: 6px;
+    }
+    #death-screen button:active, #title-screen button:active { background: rgba(255,255,255,0.25); }
+    .death-btns { display: flex; flex-wrap: wrap; justify-content: center; }
+
+    #hint {
+      position: fixed;
+      bottom: 160px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.3);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      pointer-events: none;
+      white-space: nowrap;
+      transition: opacity 1s;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="floor-label">Floor 1</div>
+<div id="timer-label">0:00.0</div>
+<button id="map-btn">MAP</button>
+<button id="rot-left-btn"  class="rot-btn" title="Rotate view left (Q)">&#10226;</button>
+<button id="rot-right-btn" class="rot-btn" title="Rotate view right (E)">&#10227;</button>
+<button id="reset-btn">RESET</button>
+<button id="tilt-btn">TILT: OFF</button>
+<button id="admin-btn">SETTINGS</button>
+
+<div id="admin-panel">
+  <h2>Settings</h2>
+  <div class="sens-row">
+    <label>Joystick Sensitivity <em id="joy-sens-val">1.5</em></label>
+    <input type="range" id="joy-sens-sl" min="0.3" max="3" step="0.1" value="1.5">
+  </div>
+  <div class="sens-row check-row">
+    <label>8-Way Steering (mouse/touch) <input type="checkbox" id="snap8-cb" checked></label>
+  </div>
+  <div class="sens-row">
+    <label>Tilt Sensitivity <em id="tilt-sens-val">2.8</em></label>
+    <input type="range" id="tilt-sens-sl" min="0.5" max="5" step="0.1" value="2.8">
+  </div>
+  <div class="sens-row">
+    <label>Bounce Sensitivity <em id="bounce-val">0.75</em></label>
+    <input type="range" id="bounce-sl" min="0.1" max="1" step="0.05" value="0.75">
+  </div>
+  <div class="sens-row">
+    <label>Sound Effect Volume <em id="sfx-val">1.0</em></label>
+    <input type="range" id="sfx-sl" min="0" max="1" step="0.05" value="1">
+  </div>
+  <div class="sens-row">
+    <label>Music Volume <em id="music-val">0.5</em></label>
+    <input type="range" id="music-sl" min="0" max="1" step="0.05" value="0.5">
+  </div>
+  <div class="sens-row">
+    <label>Magnet Duration <em id="magnet-dur-val">30</em>s</label>
+    <input type="range" id="magnet-dur-sl" min="5" max="60" step="1" value="30">
+  </div>
+  <button id="adv-toggle"><span id="adv-arrow">&#9656;</span> Advanced</button>
+  <div id="adv-section">
+    <div class="sens-row">
+      <label>Acceleration <em id="accel-val">900</em></label>
+      <input type="range" id="accel-sl" min="200" max="1600" step="50" value="900">
+    </div>
+    <div class="sens-row">
+      <label>Top Speed <em id="max-speed-val">550</em></label>
+      <input type="range" id="max-speed-sl" min="200" max="1200" step="25" value="550">
+    </div>
+    <div class="sens-row">
+      <label>Rolling Friction <em id="fric-val">0.990</em></label>
+      <input type="range" id="fric-sl" min="0.950" max="1" step="0.001" value="0.99">
+    </div>
+    <div class="sens-row">
+      <label>Idle Braking <em id="idle-fric-val">0.950</em></label>
+      <input type="range" id="idle-fric-sl" min="0.850" max="0.995" step="0.005" value="0.95">
+    </div>
+    <div class="sens-row">
+      <label>Brake Boost <em id="brake-val">2.2</em></label>
+      <input type="range" id="brake-sl" min="1" max="4" step="0.1" value="2.2">
+    </div>
+    <div class="sens-row">
+      <label>Steering Response <em id="joy-resp-val">8.0</em></label>
+      <input type="range" id="joy-resp-sl" min="2" max="20" step="0.5" value="8">
+    </div>
+    <div class="sens-row">
+      <label>Diagonal Speed <em id="diag-speed-val">0.90</em></label>
+      <input type="range" id="diag-speed-sl" min="0.5" max="1.2" step="0.05" value="0.9">
+    </div>
+    <div class="sens-row">
+      <label>Diagonal Response <em id="diag-resp-val">1.2</em></label>
+      <input type="range" id="diag-resp-sl" min="0.5" max="2" step="0.1" value="1.2">
+    </div>
+    <button id="adv-reset">Reset Advanced</button>
+  </div>
+  <button id="admin-done">Done</button>
+</div>
+<div id="hint">Arrow keys · Click &amp; drag · or enable Tilt</div>
+
+<div id="end-screen">
+  <h1>Tower Complete</h1>
+  <p>You unlocked the sequence and escaped through the Floor 4 exit</p>
+  <p id="end-time"></p>
+  <button id="play-again-btn">PLAY AGAIN</button>
+</div>
+
+<div id="death-screen">
+  <h1 id="death-title">INTO THE VOID</h1>
+  <p id="death-sub">A bottomless pit. Emphasis on bottomless.</p>
+  <div class="death-btns">
+    <button id="death-restart">RESTART FLOOR</button>
+    <button id="death-newgame">NEW GAME</button>
+    <button id="death-quit">QUIT</button>
+  </div>
+</div>
+
+<div id="title-screen">
+  <h1>Tower Maze</h1>
+  <p>Roll. Solve. Descend.</p>
+  <button id="title-play">PLAY</button>
+</div>
+
+<script>
+'use strict';
+
+// ================================================================
+//  PHYSICS & GAME CONFIG  ← tune all the feel values here
+// ================================================================
+const CONFIG = {
+  // Ball dynamics
+  acceleration:         900,   // px/s²  – how quickly ball builds up speed from input
+  maxSpeed:             550,   // px/s   – ball's terminal velocity
+  friction:             0.99,  // 0–1    – velocity multiplier per frame (60fps ref) while steering
+  idleFriction:         0.95,  // 0–1    – stronger braking when there's no input (ball settles)
+  brakeBoost:           2.2,   // ≥1     – acceleration multiplier when steering against motion
+  wallBounce:           0.75,  // 0–1    – speed kept after bouncing off a wall (0=dead stop)
+
+  // Controls
+  joystickSensitivity:  1.5,   // 0.3–3  – shapes deflection→speed curve (2.5 = linear;
+                               //          lower = finer control at small deflections;
+                               //          1.5 default play-tested 2026-06-12)
+  joystickRadius:       90,    // px     – cursor distance from anchor for full speed
+  joystickSnap8:        true,  // snap mouse/touch steering to 8 directions (tilt stays analog)
+  tiltSensitivity:      2.8,   // 0–5    – scales device tilt angle → acceleration
+  keyboardSensitivity:  1.0,   // 0–2    – scales arrow key → acceleration
+
+  // Joystick direct drive: deflection sets a TARGET SPEED the ball
+  // converges on (small drag = slow crawl, centre = stop) — unlike tilt,
+  // which applies physical thrust. Surface traction scales the response.
+  joyResponse:          8,     // 1/s    – convergence rate toward the target speed
+  joyDiagSpeed:         0.9,   // ×      – diagonal top speed (a touch slower for corners)
+  joyDiagResponse:      1.2,   // ×      – diagonal convergence (a touch snappier for corners)
+
+  // Pause / Anchor
+  pauseBraking:         0.04,  // 0–1    – velocity multiplier per frame while paused
+                               //          0 = instant stop, 0.85 = slow drift-to-stop
+
+  // Geometry
+  ballRadius:           16,    // px
+  wallThickness:        24,    // px
+  holeRadius:           26,    // px  – must be larger than ballRadius
+  doorWidth:            90,    // px  – height of the door gap in the perimeter wall
+
+  // Camera
+  cameraSmoothing:      9,     // higher = snappier follow (units: 1/s)
+
+  // ── Grid ─────────────────────────────────────────────────────
+  tileSize:             70,    // px  – play area square size (drives the grid)
+  gridLineOpacity:      0.5,  // 0–1 – grid line alpha; raise to make grid more visible
+  gridLineThickness:    1,     // px  – grid stroke width
+  gridLineColor:        '210,200,175', // RGB for rgba() – warm stone tone
+
+  // ── Platform (Floor 1 test area) ─────────────────────────────
+  platformHeight:                35,   // px  – visual elevation depth (drives shadow/face thickness)
+
+  // ── Isometric view ───────────────────────────────────────────
+  wallHeight:           42,    // px  – vertical height of walls in iso view
+  viewRotateSpeed:      7,     // 1/s – how snappily the camera swings to a new 90° heading
+
+  // ── Surface feel ─────────────────────────────────────────────
+  // fric: friction × (higher = slows faster) · cap: top-speed ×
+  // accel: traction × (input thrust) · noBrake: counter-steer boost off
+  surfaceFeel: {
+    mud1:  { fric: 1.5, cap: 0.85, accel: 0.85 },               // thin mud
+    mud2:  { fric: 2.5, cap: 0.65, accel: 0.70 },               // mud
+    mud3:  { fric: 4.0, cap: 0.45, accel: 0.55 },               // deep mud
+    ice:   { fric: 0.4, cap: 1.0,  accel: 0.25, noBrake: true },
+    mover: { fric: 2.0, cap: 0.5,  accel: 0.80 },
+  },
+
+  // ── Brick walls & doors ──────────────────────────────────────
+  brickHitSpeed:        220,   // px/s – minimum impact speed to crack a brick wall
+  doorOpenSeconds:      4,     // s    – how long a two-way door stays open per unlock
+
+  // ── Items ────────────────────────────────────────────────────
+  launchPower:          900,   // px/s – speed the launcher's spring imparts
+  rampMinSpeed:         300,   // px/s – speed along the ramp needed to take off
+  rampLift:             0.55,  // ratio of entry speed converted to vertical launch
+  gravityZ:             900,   // px/s² – pulls airborne balls back down
+  flightSpeed:          700,   // px/s – horizontal speed of a launcher-powered ramp flight
+  magnetRange:          26,    // px   – gap (beyond contact) within which the ball attracts objects
+  magnetSpeed:          320,   // px/s – how fast a magnetized object closes the gap
+  magnetBreakSpeed:     340,   // px/s – ball speed above which the magnet disengages
+  magnetDuration:       30,    // s    – magnetism granted per horseshoe pickup; re-collect to re-arm
+
+  // ── Collision sound & bounce effect ──────────────────────────
+  bounceMinSpeed:       30,    // px/s – minimum impact speed to fire sound/effect
+  bounceVolume:         0.40,  // 0–1  – collision sound master volume
+
+  // ── Audio mix ────────────────────────────────────────────────
+  sfxVolume:            1.0,   // 0–1  – master multiplier for all sound effects
+  musicVolume:          0.5,   // 0–1  – music level (music itself arrives in a later version)
+
+  // ── Debug ────────────────────────────────────────────────────
+  showSurfaceDebug:     true,  // show surface-type label while testing
+};
+// ================================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+
+// Test levels: tiny single-mechanic floors, opened with ?test=<name>
+const TEST_LEVEL = new URLSearchParams(location.search).get('test');
+
+let W = 0, H = 0;  // viewport size (updated on resize)
+let floors = [];
+let gs     = null; // game state
+let lastTime = null;
+
+// ── Audio ────────────────────────────────────────────────────────
+let audioCtx      = null;
+let lastBounceAt  = 0;  // ms timestamp, throttles rapid-fire sounds
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playBounceSound(impactSpeed) {
+  try {
+    const ac  = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t   = ac.currentTime;
+    const vol = Math.min(1, impactSpeed / 400) * CONFIG.bounceVolume * CONFIG.sfxVolume;
+
+    // Tonal body — pitch drops quickly (physical "thud")
+    const osc     = ac.createOscillator();
+    const oscGain = ac.createGain();
+    osc.connect(oscGain);
+    oscGain.connect(ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(240 + impactSpeed * 0.18, t);
+    osc.frequency.exponentialRampToValueAtTime(70, t + 0.14);
+    oscGain.gain.setValueAtTime(vol * 0.9, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    osc.start(t);
+    osc.stop(t + 0.18);
+
+    // Sharp transient click (attack definition)
+    const click     = ac.createOscillator();
+    const clickGain = ac.createGain();
+    click.connect(clickGain);
+    clickGain.connect(ac.destination);
+    click.type = 'square';
+    click.frequency.setValueAtTime(900, t);
+    clickGain.gain.setValueAtTime(vol * 0.12, t);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.018);
+    click.start(t);
+    click.stop(t + 0.018);
+  } catch (_) {}
+}
+
+function playTriggerSound(step) {
+  // Rising chime — pitch climbs with each trigger collected (step = 1, 2, 3 …)
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t    = ac.currentTime;
+    const freq = 520 * Math.pow(2, (step - 1) * 4 / 12); // up a major 3rd per step
+    const osc  = ac.createOscillator();
+    const g    = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.30 * CONFIG.sfxVolume, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    osc.start(t); osc.stop(t + 0.45);
+  } catch (_) {}
+}
+
+function playSwitchSound() {
+  // Heavy clunk + rising power-up hum — machinery coming online
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime, v = CONFIG.sfxVolume;
+    const clunk = ac.createOscillator(), cg = ac.createGain();
+    clunk.connect(cg); cg.connect(ac.destination);
+    clunk.type = 'square';
+    clunk.frequency.setValueAtTime(140, t);
+    clunk.frequency.exponentialRampToValueAtTime(70, t + 0.08);
+    cg.gain.setValueAtTime(0.25 * v, t);
+    cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.10);
+    clunk.start(t); clunk.stop(t + 0.10);
+    const hum = ac.createOscillator(), hg = ac.createGain();
+    hum.connect(hg); hg.connect(ac.destination);
+    hum.type = 'sawtooth';
+    hum.frequency.setValueAtTime(160, t + 0.06);
+    hum.frequency.exponentialRampToValueAtTime(640, t + 0.40);
+    hg.gain.setValueAtTime(0.0001, t + 0.06);
+    hg.gain.exponentialRampToValueAtTime(0.16 * v, t + 0.16);
+    hg.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    hum.start(t + 0.06); hum.stop(t + 0.45);
+  } catch (_) {}
+}
+
+function playUnlockSound() {
+  // Two-note resolve chord — "the way is open"
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    [[523.25, 0], [783.99, 0.09]].forEach(([f, dly]) => {
+      const osc = ac.createOscillator();
+      const g   = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, t + dly);
+      g.gain.setValueAtTime(0.0001, t + dly);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.26 * CONFIG.sfxVolume), t + dly + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dly + 0.7);
+      osc.start(t + dly); osc.stop(t + dly + 0.7);
+    });
+  } catch (_) {}
+}
+
+function playErrorSound() {
+  // Low dissonant buzz — wrong sequence, progress reset
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    [110, 116.5].forEach(f => {
+      const osc = ac.createOscillator();
+      const g   = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0.10 * CONFIG.sfxVolume, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      osc.start(t); osc.stop(t + 0.35);
+    });
+  } catch (_) {}
+}
+
+// ── Bounce visual effects ────────────────────────────────────────
+const bounceEffects = [];
+
+function onBounce(contactX, contactY, impactSpeed) {
+  if (impactSpeed < CONFIG.bounceMinSpeed) return;
+
+  // Visual ring — always spawned (doesn't need throttle)
+  bounceEffects.push({ x: contactX, y: contactY, life: 1.0, speed: impactSpeed });
+
+  // Sound — throttled so rapid wall-sliding doesn't spam
+  const now = performance.now();
+  if (now - lastBounceAt > 75) {
+    lastBounceAt = now;
+    playBounceSound(impactSpeed);
+  }
+}
+
+function updateBounceEffects(dt) {
+  for (let i = bounceEffects.length - 1; i >= 0; i--) {
+    bounceEffects[i].life -= dt * 6.5;   // ~0.15 s lifetime
+    if (bounceEffects[i].life <= 0) bounceEffects.splice(i, 1);
+  }
+}
+
+function drawBounceEffects() {
+  for (const ef of bounceEffects) {
+    const p    = isoProject(ef.x, ef.y, 0);
+    const age  = 1 - ef.life;                          // 0→1
+    const r    = CONFIG.ballRadius * (1 + age * 2.8);  // expanding ring
+    const lw   = 2.5 * ef.life;
+    const alpha = ef.life * 0.8;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, r, r * ISO_Y, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,255,220,${alpha.toFixed(3)})`;
+    ctx.lineWidth   = lw;
+    ctx.stroke();
+  }
+}
+
+// ── Floor data ──────────────────────────────────────────────────
+function deviceClass() {
+  const touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (!touch) return 'desktop';
+  return Math.min(window.innerWidth, window.innerHeight) >= 600 ? 'tablet' : 'phone';
+}
+
+// ── Test levels ──────────────────────────────────────────────────
+// Small single-purpose floors for perfecting one mechanic in isolation.
+// 'jump': a chasm splits the floor into two halves — bands 7/6/5/4 squares
+// wide from top to bottom. The launcher's number (6) is how many squares
+// the ball flies after leaving the ramp, so launcher + ramp must be pushed
+// to a band 5 or narrower, the switch found, and the jump made to the exit.
+function buildTestLevel(name) {
+  const ts = CONFIG.tileSize;
+  const wt = CONFIG.wallThickness;
+  const COLS = 24, ROWS = 14;
+  const fw = COLS * ts, fh = ROWS * ts;
+  const f = {
+    index: 0,
+    label: 'TEST: ' + name.toUpperCase(),
+    width: fw, height: fh,
+    bgColor: '#3d3a2d', tileColor: '#464237', tileLineColor: 'rgba(0,0,0,0.09)',
+    wallColor: '#7d7254', wallHighlight: '#b0a072', wallShadow: '#2e2b1e',
+    wallAO: 'rgba(0,0,0,0.28)',
+    hole: null, door: null,
+    triggers: [], requireSequence: false,
+    startX: 2 * ts, startY: 2 * ts,
+    platformStructures: [], innerWalls: [],
+    tiles: {}, movers: [], doors: [], bridges: [],
+    launchers: [], launcherSwitches: [], ramps: [], pickups: [],
+  };
+  floors = [f];
+
+  if (name === 'jump') {
+    // ── Chasm: left edge at col 9, width varies by row band ──────
+    // bands: [firstRow, lastRow exclusive, pitWidth]
+    const bands = [[0, 4, 7], [4, 7, 6], [7, 10, 5], [10, ROWS, 4]];
+    for (const [r0, r1, w] of bands)
+      for (let rr = r0; rr < r1; rr++)
+        for (let c = 9; c < 9 + w; c++)
+          f.tiles[c + ',' + rr] = 'pit';
+
+    // ── Guide wall at col 8 with a gap only at the 4-wide band ───
+    // The wall runs the full height, broken only at rows 10–13 (the
+    // narrowest section). The ball clears a 4-wide gap with 2 squares
+    // to spare, so the player can learn the mechanic without dying.
+    // The ramp slots through the gap — no chasm exposure while positioning.
+    const gapTop = 10 * ts;
+    f.innerWalls.push(
+      { x: 8 * ts, y: wt, w: wt, h: gapTop - wt }
+      // no bottom segment: the gap runs all the way to the south wall
+    );
+
+    // ── Exit hole on the far side, centre of the 4-wide band ─────
+    f.hole = { x: 20.5 * ts, y: 12 * ts, r: CONFIG.holeRadius };
+
+    // ── Launcher starts in the top-left zone (left of the wall) ──
+    // Ramp starts directly east of the launcher, also left of wall.
+    // The player's task: grab the magnet, pull the ramp south to the
+    // gap (rows 7-9), push it east through the gap to flush at col 9,
+    // align the launcher behind it, find the switch, then fire.
+    f.launchers.push(mkLauncher(f, 3 * ts / fw, 2.5 * ts / fh, { x: 1, y: 0 }, 6));
+    f.ramps.push(   mkRamp(     f, 5.5 * ts / fw, 2.5 * ts / fh, { x: 1, y: 0 }));
+
+    // ── Switch: bottom-left, in the same zone as the gap row ─────
+    f.launcherSwitches.push(mkLauncherSwitch(f, 2 * ts / fw, 12 * ts / fh));
+
+    // ── Magnet pickup: mid-left area, south of the start zone ───
+    f.pickups.push({ id: 'test-mag', type: 'magnet', x: 5 * ts, y: 7 * ts });
+  }
+}
+
+function buildFloors() {
+  if (TEST_LEVEL) { buildTestLevel(TEST_LEVEL); return; }
+
+  // Phones get a long scrolling floor; tablets (and desktop) see most of it at once
+  const dc = deviceClass();
+  const fw = Math.round(W * (dc === 'phone' ? 4   : 1.5));
+  const fh = Math.round(H * (dc === 'phone' ? 2.5 : 1.5));
+  const wt = CONFIG.wallThickness;
+  const r  = CONFIG.ballRadius;
+  const ts = CONFIG.tileSize;
+
+  // Helper: proportional point
+  const P = (px, py) => ({ x: Math.round(fw * px), y: Math.round(fh * py) });
+
+  floors = [
+    // ── Floor 1 — simple: find the hole ─────────────────────────
+    {
+      index:  0,
+      label:  'Floor 1',
+      width:  fw,
+      height: fh,
+      bgColor:        '#3d3a2d',
+      tileColor:      '#464237',
+      tileLineColor:  'rgba(0,0,0,0.09)',
+      wallColor:      '#7d7254',
+      wallHighlight:  '#b0a072',
+      wallShadow:     '#2e2b1e',
+      wallAO:         'rgba(0,0,0,0.28)',
+      hole: { ...P(0.58, 0.42), r: CONFIG.holeRadius },
+      door: null,
+      triggers: [],
+      requireSequence: false,
+      startX: wt + r + 30,
+      startY: wt + r + 30,
+      platformStructures: [{ x: wt + 2 * ts, y: wt + 2 * ts, w: 3 * ts, h: 3 * ts }],
+      innerWalls: [],
+    },
+    // ── Floor 2 — one trigger unlocks the hole ──────────────────
+    {
+      index:  1,
+      label:  'Floor 2',
+      width:  fw,
+      height: fh,
+      bgColor:        '#2a2d36',
+      tileColor:      '#31353f',
+      tileLineColor:  'rgba(0,0,0,0.12)',
+      wallColor:      '#52596e',
+      wallHighlight:  '#7888aa',
+      wallShadow:     '#191c24',
+      wallAO:         'rgba(0,0,0,0.32)',
+      hole: { ...P(0.86, 0.18), r: CONFIG.holeRadius },
+      door: null,
+      triggers: [ { id: 'f2-t1', ...P(0.14, 0.78), r: 30 } ],
+      requireSequence: false,
+      startX: 0, startY: 0,  // set below (floor 1 hole)
+      platformStructures: [],
+      innerWalls: [
+        // Vertical baffle: forces a detour around the bottom
+        { x: Math.round(fw * 0.38), y: wt, w: wt, h: Math.round(fh * 0.62) },
+        // Horizontal baffle near the hole corner
+        { x: Math.round(fw * 0.66), y: Math.round(fh * 0.40), w: Math.round(fw * 0.34) - wt, h: wt },
+      ],
+    },
+    // ── Floor 3 — two triggers, any order ────────────────────────
+    {
+      index:  2,
+      label:  'Floor 3',
+      width:  fw,
+      height: fh,
+      bgColor:        '#26332b',
+      tileColor:      '#2d3b32',
+      tileLineColor:  'rgba(0,0,0,0.12)',
+      wallColor:      '#4e6a58',
+      wallHighlight:  '#7da88a',
+      wallShadow:     '#16211a',
+      wallAO:         'rgba(0,0,0,0.32)',
+      hole: { ...P(0.10, 0.15), r: CONFIG.holeRadius },
+      door: null,
+      triggers: [
+        { id: 'f3-t1', ...P(0.13, 0.80), r: 30 },
+        { id: 'f3-t2', ...P(0.88, 0.75), r: 30 },
+      ],
+      requireSequence: false,
+      startX: 0, startY: 0,  // set below (floor 2 hole)
+      platformStructures: [],
+      innerWalls: [
+        // Horizontal shelf guarding the exit hole's quadrant
+        { x: wt, y: Math.round(fh * 0.33), w: Math.round(fw * 0.30), h: wt },
+        // Vertical baffle mid-floor
+        { x: Math.round(fw * 0.55), y: Math.round(fh * 0.38), w: wt, h: Math.round(fh * 0.62) - wt },
+      ],
+    },
+    // ── Floor 4 — three triggers in sequence unlock exit door ────
+    {
+      index:  3,
+      label:  'Floor 4',
+      width:  fw,
+      height: fh,
+      bgColor:        '#332629',
+      tileColor:      '#3b2d31',
+      tileLineColor:  'rgba(0,0,0,0.12)',
+      wallColor:      '#6a4e55',
+      wallHighlight:  '#a87d88',
+      wallShadow:     '#21161a',
+      wallAO:         'rgba(0,0,0,0.32)',
+      hole: null,
+      door: { wall: 'right', center: Math.round(fh * 0.50), width: CONFIG.doorWidth },
+      triggers: [
+        { id: 'f4-t1', order: 0, ...P(0.78, 0.18), r: 30 },
+        { id: 'f4-t2', order: 1, ...P(0.18, 0.82), r: 30 },
+        { id: 'f4-t3', order: 2, ...P(0.55, 0.50), r: 30 },
+      ],
+      requireSequence: true,
+      startX: 0, startY: 0,  // set below (floor 3 hole)
+      platformStructures: [],
+      innerWalls: [
+        // Diagonal-ish layout of baffles around the centre pad
+        { x: Math.round(fw * 0.40), y: wt, w: wt, h: Math.round(fh * 0.40) },
+        { x: Math.round(fw * 0.40), y: Math.round(fh * 0.65), w: Math.round(fw * 0.35), h: wt },
+        { x: Math.round(fw * 0.70), y: Math.round(fh * 0.30), w: wt, h: Math.round(fh * 0.35) },
+      ],
+    },
+  ];
+
+  // Each floor spawns the ball where it fell through the hole above
+  for (let i = 1; i < floors.length; i++) {
+    const above = floors[i - 1];
+    if (above.hole) {
+      floors[i].startX = above.hole.x;
+      floors[i].startY = above.hole.y;
+    }
+  }
+
+  // ── Surface tiles & moving platforms ──────────────────────────
+  for (const f of floors) {
+    f.tiles = {}; f.movers = []; f.doors = [];
+    f.bridges = []; f.launchers = []; f.launcherSwitches = []; f.ramps = []; f.pickups = [];
+  }
+
+  // Floor 1 — teaching patches: feel mud and ice with no danger
+  paintTiles(floors[0], 0.30, 0.58, 0.12, 0.20, 'mud1');
+  paintTiles(floors[0], 0.46, 0.18, 0.15, 0.20, 'ice');
+
+  // Floor 2 — ice run on the southern route, mud chicane, lava pocket
+  paintTiles(floors[1], 0.42, 0.70, 0.22, 0.14, 'ice');
+  paintTiles(floors[1], 0.52, 0.25, 0.10, 0.28, 'mud2');
+  paintTiles(floors[1], 0.72, 0.78, 0.09, 0.12, 'lava');
+
+  // Floor 3 — pit channel crossed by a moving platform, lava shelf
+  paintTiles(floors[2], 0.30, 0.40, 0.07, 0.60, 'pit');
+  paintTiles(floors[2], 0.62, 0.12, 0.13, 0.14, 'lava');
+  floors[2].movers.push(mkMover(floors[2], 0.265, 0.62, 0.40, 0.62, 2.2));
+
+  // Floor 4 — pit moat before the exit, icy approach, mud trap
+  paintTiles(floors[3], 0.84, 0.28, 0.07, 0.44, 'pit');
+  paintTiles(floors[3], 0.55, 0.12, 0.18, 0.10, 'ice');
+  paintTiles(floors[3], 0.12, 0.55, 0.12, 0.14, 'mud3');
+  floors[3].movers.push(mkMover(floors[3], 0.805, 0.50, 0.945, 0.50, 2.6));
+
+  // ── Brick walls & inner doors ──────────────────────────────────
+  // Floor 2: one-way door through the tall baffle (right→left shortcut to the trigger)
+  {
+    const f2 = floors[1];
+    const bx = Math.round(fw * 0.38);
+    const dY = Math.round(fh * 0.28);
+    f2.innerWalls[0] = { x: bx, y: wt, w: wt, h: dY - 45 - wt };
+    f2.innerWalls.push({ x: bx, y: dY + 45, w: wt, h: Math.round(fh * 0.62) - (dY + 45) });
+    f2.doors.push({ id: 'f2-d1', type: 'oneway', dir: { x: -1, y: 0 }, x: bx, y: dY - 45, w: wt, h: 90 });
+  }
+
+  // Floor 3: brick section in the shelf guarding the hole — smash a shortcut
+  {
+    const f3 = floors[2];
+    const shelfY = Math.round(fh * 0.33);
+    const bx0 = Math.round(fw * 0.12), bx1 = Math.round(fw * 0.20);
+    f3.innerWalls[0] = { x: wt, y: shelfY, w: bx0 - wt, h: wt };
+    f3.innerWalls.push({ x: bx0, y: shelfY, w: bx1 - bx0, h: wt, material: 'brick', hp: 3 });
+    f3.innerWalls.push({ x: bx1, y: shelfY, w: Math.round(fw * 0.30) - bx1, h: wt });
+  }
+
+  // Floor 4: one-time door, two-way (unlock-each-time) door, brick section
+  {
+    const f4 = floors[3];
+    // One-time door in the horizontal baffle
+    const oY = Math.round(fh * 0.65), oX = Math.round(fw * 0.55);
+    f4.innerWalls[1] = { x: Math.round(fw * 0.40), y: oY, w: oX - 45 - Math.round(fw * 0.40), h: wt };
+    f4.innerWalls.push({ x: oX + 45, y: oY, w: Math.round(fw * 0.75) - (oX + 45), h: wt });
+    f4.doors.push({ id: 'f4-d1', type: 'onetime', x: oX - 45, y: oY, w: 90, h: wt });
+    // Two-way door in the right vertical baffle
+    const tX = Math.round(fw * 0.70), tY = Math.round(fh * 0.475);
+    f4.innerWalls[2] = { x: tX, y: Math.round(fh * 0.30), w: wt, h: tY - 45 - Math.round(fh * 0.30) };
+    f4.innerWalls.push({ x: tX, y: tY + 45, w: wt, h: Math.round(fh * 0.65) - (tY + 45) });
+    f4.doors.push({ id: 'f4-d2', type: 'twoway', x: tX, y: tY - 45, w: wt, h: 90 });
+    // Brick section in the left vertical baffle
+    const vX = Math.round(fw * 0.40);
+    const bY0 = Math.round(fh * 0.18), bY1 = Math.round(fh * 0.26);
+    f4.innerWalls[0] = { x: vX, y: wt, w: wt, h: bY0 - wt };
+    f4.innerWalls.push({ x: vX, y: bY0, w: wt, h: bY1 - bY0, material: 'brick', hp: 3 });
+    f4.innerWalls.push({ x: vX, y: bY1, w: wt, h: Math.round(fh * 0.40) - bY1 });
+  }
+
+  // ── Items: bridges, launchers, ramps, pickups ──────────────────
+  // Floor 1 — playground: push the launcher around, try the ramp
+  floors[0].launchers.push(mkLauncher(floors[0], 0.66, 0.62, { x: 1, y: 0 }));
+  floors[0].launcherSwitches.push(mkLauncherSwitch(floors[0], 0.55, 0.80));
+  floors[0].ramps.push(mkRamp(floors[0], 0.82, 0.62, { x: 1, y: 0 }));
+
+  // Floor 3 — wooden bridge over the pit channel; Stronger Ball pickup
+  floors[2].bridges.push(mkBridge(floors[2], 0.30, 0.76, 0.07, 0.08, 3));
+  floors[2].pickups.push({ id: 'f3-p1', type: 'strongball', ...P(0.70, 0.45) });
+
+  // Floor 4 — bridge over the moat's north end; ramp + launcher jump south
+  floors[3].bridges.push(mkBridge(floors[3], 0.84, 0.30, 0.07, 0.08, 3));
+  floors[3].ramps.push(mkRamp(floors[3], 0.79, 0.59, { x: 1, y: 0 }));
+  floors[3].launchers.push(mkLauncher(floors[3], 0.55, 0.59, { x: 1, y: 0 }));
+  floors[3].launcherSwitches.push(mkLauncherSwitch(floors[3], 0.20, 0.30));
+  floors[3].pickups.push({ id: 'f4-p1', type: 'strongball', ...P(0.30, 0.55) });
+}
+
+// Wooden bridge spanning hazard tiles (proportional rect, slightly widened)
+function mkBridge(floor, px, py, pw, ph, uses) {
+  return {
+    x: Math.round(floor.width * px) - 20, y: Math.round(floor.height * py),
+    w: Math.round(floor.width * pw) + 40, h: Math.round(floor.height * ph),
+    uses,
+  };
+}
+
+// Pushable spring launcher; `facing` is the active (spring) face's outward
+// normal. `power` = squares the ball flies after leaving a ramp (shown on top).
+function mkLauncher(floor, px, py, facing, power = 6) {
+  const s = Math.round(CONFIG.tileSize * 1.1);
+  const x = Math.round(floor.width * px - s / 2), y = Math.round(floor.height * py - s / 2);
+  return { x, y, w: s, h: s, facing, power, homeX: x, homeY: y, springT: -9, cooldown: -9, on: false };
+}
+
+// Floor switch that powers up every launcher on its floor
+function mkLauncherSwitch(floor, px, py) {
+  const s = Math.round(CONFIG.tileSize * 0.9);
+  return { x: Math.round(floor.width * px - s / 2), y: Math.round(floor.height * py - s / 2), w: s, h: s };
+}
+
+// Ramp: rolling onto it fast enough along `dir` launches the ball into the
+// air. Pushable from its 3 walled sides (the low entry edge is for riding up).
+function mkRamp(floor, px, py, dir) {
+  const s = Math.round(CONFIG.tileSize * 1.5);
+  const x = Math.round(floor.width * px - s / 2), y = Math.round(floor.height * py - s / 2);
+  return { x, y, w: s, h: s, dir, homeX: x, homeY: y };
+}
+
+// Paint a proportional rect of the floor with a tile type (snapped to the grid)
+function paintTiles(floor, px, py, pw, ph, type) {
+  const ts = CONFIG.tileSize;
+  const c0 = Math.round(floor.width  * px / ts);
+  const r0 = Math.round(floor.height * py / ts);
+  const c1 = Math.max(c0 + 1, Math.round(floor.width  * (px + pw) / ts));
+  const r1 = Math.max(r0 + 1, Math.round(floor.height * (py + ph) / ts));
+  for (let c = c0; c < c1; c++)
+    for (let r = r0; r < r1; r++)
+      floor.tiles[c + ',' + r] = type;
+}
+
+// Moving platform that ping-pongs between two proportional points
+function mkMover(floor, px1, py1, px2, py2, period) {
+  const s = CONFIG.tileSize * 1.6;
+  return {
+    x1: floor.width * px1 - s / 2, y1: floor.height * py1 - s / 2,
+    x2: floor.width * px2 - s / 2, y2: floor.height * py2 - s / 2,
+    w: s, h: s, period,
+    cx: floor.width * px1 - s / 2, cy: floor.height * py1 - s / 2,
+    dx: 0, dy: 0,
+  };
+}
+
+function tileTypeAt(floor, x, y) {
+  if (!floor.tiles) return 'normal';
+  const ts = CONFIG.tileSize;
+  return floor.tiles[Math.floor(x / ts) + ',' + Math.floor(y / ts)] || 'normal';
+}
+
+function moverPos(m, time) {
+  const t = (time / m.period) % 2;
+  const k = t < 1 ? t : 2 - t;            // ping-pong 0..1
+  const e = k * k * (3 - 2 * k);          // smoothstep easing at the ends
+  return { x: m.x1 + (m.x2 - m.x1) * e, y: m.y1 + (m.y2 - m.y1) * e };
+}
+
+function updateMovers(floor, dt) {
+  gs.time += dt;
+  for (const m of (floor.movers || [])) {
+    const p = moverPos(m, gs.time);
+    m.dx = p.x - m.cx;
+    m.dy = p.y - m.cy;
+    m.cx = p.x;
+    m.cy = p.y;
+  }
+}
+
+function moverUnder(floor, ball) {
+  for (const m of (floor.movers || [])) {
+    if (ball.x >= m.cx && ball.x <= m.cx + m.w &&
+        ball.y >= m.cy && ball.y <= m.cy + m.h) return m;
+  }
+  return null;
+}
+
+// ── Brick walls & inner doors ────────────────────────────────────
+function freshWallHp(floor) {
+  return (floor.innerWalls || []).map(iw => iw.material === 'brick' ? (iw.hp || 3) : Infinity);
+}
+
+function freshDoorState(floor) {
+  const o = {};
+  for (const d of (floor.doors || [])) o[d.id] = { used: false, openUntil: -1, inside: false, entrySide: 0 };
+  return o;
+}
+
+function doorState(d) { return gs.doorState[gs.floor][d.id]; }
+
+// Which side of the door's wall the ball is on (±1 along the wall's thin axis)
+function doorAxisSide(d, ball) {
+  return d.w <= d.h
+    ? (Math.sign(ball.x - (d.x + d.w / 2)) || 1)
+    : (Math.sign(ball.y - (d.y + d.h / 2)) || 1);
+}
+
+// Unlock pads either side of a two-way door — offset diagonally so the
+// ball can't unlock it just by charging straight at the gap
+function doorPads(d) {
+  const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+  return d.w <= d.h
+    ? [{ x: cx - 80, y: cy - 120 }, { x: cx + 80, y: cy + 120 }]
+    : [{ x: cx - 120, y: cy - 80 }, { x: cx + 120, y: cy + 80 }];
+}
+
+function doorBlocksBall(d, ball) {
+  const st = doorState(d);
+  if (st.inside) return false;            // committed to the gap — let it finish
+  if (d.type === 'oneway')  return (ball.vx * d.dir.x + ball.vy * d.dir.y) <= 1;
+  if (d.type === 'onetime') return st.used;
+  return gs.time > st.openUntil;          // twoway: open only while unlocked
+}
+
+function updateDoors(floor, ball) {
+  const r = CONFIG.ballRadius;
+  for (const d of (floor.doors || [])) {
+    const st = doorState(d);
+
+    // Two-way unlock pads
+    if (d.type === 'twoway' && gs.time > st.openUntil) {
+      for (const p of doorPads(d)) {
+        if (Math.hypot(ball.x - p.x, ball.y - p.y) < 26 + r) {
+          st.openUntil = gs.time + CONFIG.doorOpenSeconds;
+          playUnlockSound();
+          break;
+        }
+      }
+    }
+
+    // Passage tracking — ball centre strictly inside the gap rect
+    const over = ball.x > d.x && ball.x < d.x + d.w && ball.y > d.y && ball.y < d.y + d.h;
+    if (over && !st.inside) {
+      st.inside = true;
+    } else if (!over && st.inside) {
+      st.inside = false;
+      const side = doorAxisSide(d, ball);
+      if (side !== st.entrySide) {
+        if (d.type === 'onetime') { st.used = true; playErrorSound(); }
+        if (d.type === 'twoway')  st.openUntil = -1;   // relock behind the ball
+      }
+    }
+    if (!st.inside) st.entrySide = doorAxisSide(d, ball);
+  }
+}
+
+function damageBrick(fi, i) {
+  if (gs.strongBall) {
+    // Stronger Ball: one bump levels the whole section
+    gs.wallHp[fi][i] = 0;
+    gs.strongBall = false;
+    playBrickSound(true);
+    return;
+  }
+  const key = fi + ':' + i;
+  gs.brickCd = gs.brickCd || {};
+  if (gs.time - (gs.brickCd[key] ?? -9) < 0.3) return;   // one crack per impact
+  gs.brickCd[key] = gs.time;
+  const hp = --gs.wallHp[fi][i];
+  playBrickSound(hp <= 0);
+}
+
+function playBrickSound(broke) {
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime, v = CONFIG.sfxVolume;
+    const len = Math.floor(ac.sampleRate * (broke ? 0.45 : 0.12));
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, broke ? 1.2 : 2.5);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const flt = ac.createBiquadFilter();
+    flt.type = 'bandpass';
+    flt.frequency.value = broke ? 320 : 1400;
+    flt.Q.value = 0.8;
+    const g = ac.createGain();
+    src.connect(flt); flt.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime((broke ? 0.55 : 0.35) * v, t);
+    src.start(t);
+  } catch (_) {}
+}
+
+// ── Items: bridges, launchers, ramps, pickups ────────────────────
+function bridgeUnder(floor, ball) {
+  const fi = gs.floor;
+  for (let i = 0; i < (floor.bridges || []).length; i++) {
+    const b = floor.bridges[i];
+    if (gs.bridgeUses[fi][i] <= 0) continue;
+    if (ball.x >= b.x && ball.x <= b.x + b.w && ball.y >= b.y && ball.y <= b.y + b.h) return b;
+  }
+  return null;
+}
+
+// A full crossing (in one side, out the other) wears the bridge by one use
+function updateBridges(floor, ball) {
+  const fi = gs.floor;
+  (floor.bridges || []).forEach((b, i) => {
+    if (gs.bridgeUses[fi][i] <= 0) return;
+    const st = b._st || (b._st = { inside: false, entrySide: 0 });
+    const over = ball.x >= b.x && ball.x <= b.x + b.w && ball.y >= b.y && ball.y <= b.y + b.h;
+    const side = b.w >= b.h
+      ? (Math.sign(ball.x - (b.x + b.w / 2)) || 1)
+      : (Math.sign(ball.y - (b.y + b.h / 2)) || 1);
+    if (over && !st.inside) {
+      st.inside = true;
+    } else if (!over && st.inside) {
+      st.inside = false;
+      if (side !== st.entrySide) {
+        const left = --gs.bridgeUses[fi][i];
+        playBridgeSound(left <= 0);
+      }
+    }
+    if (!over) st.entrySide = side;
+  });
+}
+
+function itemMoveValid(floor, rect, self) {
+  const wt = CONFIG.wallThickness;
+  if (rect.x < wt || rect.y < wt ||
+      rect.x + rect.w > floor.width - wt || rect.y + rect.h > floor.height - wt) return false;
+  const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  for (let i = 0; i < floor.innerWalls.length; i++) {
+    const iw = floor.innerWalls[i];
+    if (iw.material === 'brick' && gs.wallHp[gs.floor][i] <= 0) continue;
+    if (overlaps(rect, iw)) return false;
+  }
+  for (const ps of (floor.platformStructures || [])) if (overlaps(rect, ps)) return false;
+  for (const d of (floor.doors || []))               if (overlaps(rect, d))  return false;
+  for (const o of (floor.launchers || []))           if (o !== self && overlaps(rect, o)) return false;
+  for (const o of (floor.ramps || []))               if (o !== self && overlaps(rect, o)) return false;
+  // Can't be pushed over a chasm or into lava — sample the footprint
+  const step = CONFIG.tileSize / 2;
+  const xs = [], ys = [];
+  for (let sx = rect.x + 1; sx < rect.x + rect.w - 1; sx += step) xs.push(sx);
+  for (let sy = rect.y + 1; sy < rect.y + rect.h - 1; sy += step) ys.push(sy);
+  xs.push(rect.x + rect.w - 1);
+  ys.push(rect.y + rect.h - 1);
+  for (const sx of xs)
+    for (const sy of ys) {
+      const tt = tileTypeAt(floor, sx, sy);
+      if (tt === 'pit' || tt === 'lava') return false;
+    }
+  return true;
+}
+
+function handleLauncherCollision(ball, L, floor) {
+  if (ball.z > 24) return;   // flying clear over the top
+  const r  = CONFIG.ballRadius;
+  const cx = Math.max(L.x, Math.min(ball.x, L.x + L.w));
+  const cy = Math.max(L.y, Math.min(ball.y, L.y + L.h));
+  const dx = ball.x - cx, dy = ball.y - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= 0 || dist >= r) return;
+  const nx = dx / dist, ny = dy / dist;
+
+  // Dominant axis of the contact normal = the face being touched
+  const fx = Math.abs(nx) > Math.abs(ny) ? Math.sign(nx) : 0;
+  const fy = fx === 0 ? Math.sign(ny) : 0;
+
+  if (L.on && fx === L.facing.x && fy === L.facing.y && gs.time > L.cooldown) {
+    // The spring face fires (only once the launcher has been switched on)
+    ball.x = cx + nx * r;
+    ball.y = cy + ny * r;
+    ball.vx = L.facing.x * CONFIG.launchPower;
+    ball.vy = L.facing.y * CONFIG.launchPower;
+    ball.launchTiles = L.power;                       // armed: a ramp converts this to a measured flight
+    ball.launchDist  = L.power * CONFIG.tileSize;     // ...if reached within the same range on the flat
+    L.springT  = gs.time;
+    L.cooldown = gs.time + 0.5;
+    playSpringSound();
+    return;
+  }
+
+  // Any other face (every face while off): the ball shoves the launcher along the floor
+  const pen  = r - dist;
+  const prop = { x: L.x - nx * pen, y: L.y - ny * pen, w: L.w, h: L.h };
+  if (itemMoveValid(floor, prop, L)) { L.x = prop.x; L.y = prop.y; }
+
+  // Keep the ball outside; absorb (don't bounce) the approach velocity
+  const cx2 = Math.max(L.x, Math.min(ball.x, L.x + L.w));
+  const cy2 = Math.max(L.y, Math.min(ball.y, L.y + L.h));
+  const dx2 = ball.x - cx2, dy2 = ball.y - cy2;
+  const d2  = Math.hypot(dx2, dy2);
+  if (d2 > 0 && d2 < r) {
+    const nx2 = dx2 / d2, ny2 = dy2 / d2;
+    ball.x = cx2 + nx2 * r;
+    ball.y = cy2 + ny2 * r;
+    const vdn = ball.vx * nx2 + ball.vy * ny2;
+    if (vdn < 0) { ball.vx -= vdn * nx2; ball.vy -= vdn * ny2; }
+  }
+}
+
+// Rolling onto a switch powers up every launcher on the floor
+function updateLauncherSwitches(floor, ball) {
+  for (const sw of (floor.launcherSwitches || [])) {
+    const over = ball.x >= sw.x && ball.x <= sw.x + sw.w && ball.y >= sw.y && ball.y <= sw.y + sw.h;
+    if (over && !sw._in) {
+      const offs = (floor.launchers || []).filter(L => !L.on);
+      if (offs.length) {
+        for (const L of offs) L.on = true;
+        playSwitchSound();
+      }
+    }
+    sw._in = over;
+  }
+}
+
+// Ball shoves the ramp like a launcher, except on the low entry edge
+// (that's for riding up) and never while sailing overhead
+function handleRampCollision(ball, rp, floor) {
+  if (ball.z > 20) return;
+  const r  = CONFIG.ballRadius;
+  const cx = Math.max(rp.x, Math.min(ball.x, rp.x + rp.w));
+  const cy = Math.max(rp.y, Math.min(ball.y, rp.y + rp.h));
+  const dx = ball.x - cx, dy = ball.y - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= 0 || dist >= r) return;
+  const nx = dx / dist, ny = dy / dist;
+  if (ball.vx * nx + ball.vy * ny >= 0) return;   // moving away (e.g. rolling off the top)
+
+  // Contact on the entry face: let the ball roll on instead of pushing
+  const fx = Math.abs(nx) > Math.abs(ny) ? Math.sign(nx) : 0;
+  const fy = fx === 0 ? Math.sign(ny) : 0;
+  if (fx === -rp.dir.x && fy === -rp.dir.y) return;
+
+  const pen  = r - dist;
+  const prop = { x: rp.x - nx * pen, y: rp.y - ny * pen, w: rp.w, h: rp.h };
+  if (itemMoveValid(floor, prop, rp)) { rp.x = prop.x; rp.y = prop.y; }
+
+  // Keep the ball outside; absorb (don't bounce) the approach velocity
+  const cx2 = Math.max(rp.x, Math.min(ball.x, rp.x + rp.w));
+  const cy2 = Math.max(rp.y, Math.min(ball.y, rp.y + rp.h));
+  const dx2 = ball.x - cx2, dy2 = ball.y - cy2;
+  const d2  = Math.hypot(dx2, dy2);
+  if (d2 > 0 && d2 < r) {
+    const nx2 = dx2 / d2, ny2 = dy2 / d2;
+    ball.x = cx2 + nx2 * r;
+    ball.y = cy2 + ny2 * r;
+    const vdn = ball.vx * nx2 + ball.vy * ny2;
+    if (vdn < 0) { ball.vx -= vdn * nx2; ball.vy -= vdn * ny2; }
+  }
+}
+
+// ── Ball magnetism ───────────────────────────────────────────────
+// The ball attracts nearby movable objects (launchers, ramps) so they can
+// be pulled into position as well as pushed. Engages only at low speed and
+// short range; rolling fast breaks the bond and leaves the object behind.
+function updateMagnet(floor, ball, dt) {
+  if (gs.time >= (gs.magnetUntil || 0)) return;   // needs an active horseshoe charge
+  if (ball.z > 4 || ball.flight || ball.launchTiles) return;
+  if (Math.hypot(ball.vx, ball.vy) > CONFIG.magnetBreakSpeed) return;
+  const r = CONFIG.ballRadius;
+  const items = [];
+  for (const L of (floor.launchers || [])) items.push({ o: L, spring: L.on ? L.facing : null });
+  for (const rp of (floor.ramps || []))    items.push({ o: rp, spring: null });
+
+  for (const it of items) {
+    const o  = it.o;
+    const cx = Math.max(o.x, Math.min(ball.x, o.x + o.w));
+    const cy = Math.max(o.y, Math.min(ball.y, o.y + o.h));
+    const dx = ball.x - cx, dy = ball.y - cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= r || dist > r + CONFIG.magnetRange) continue;
+
+    // Never pull by an active spring face — touching it would fire the ball
+    if (it.spring) {
+      const fx = Math.abs(dx) > Math.abs(dy) ? Math.sign(dx) : 0;
+      const fy = fx === 0 ? Math.sign(dy) : 0;
+      if (fx === it.spring.x && fy === it.spring.y) continue;
+    }
+
+    // Glide the object toward the ball until contact, sliding along
+    // obstacles if the direct pull is blocked
+    const step = Math.min(CONFIG.magnetSpeed * dt, dist - r);
+    const nx = dx / dist, ny = dy / dist;
+    const prop = { x: o.x + nx * step, y: o.y + ny * step, w: o.w, h: o.h };
+    if (itemMoveValid(floor, prop, o)) {
+      o.x = prop.x; o.y = prop.y; o._magT = gs.time;
+    } else {
+      const px = { x: o.x + nx * step, y: o.y, w: o.w, h: o.h };
+      const py = { x: o.x, y: o.y + ny * step, w: o.w, h: o.h };
+      if (nx && itemMoveValid(floor, px, o))      { o.x = px.x; o._magT = gs.time; }
+      else if (ny && itemMoveValid(floor, py, o)) { o.y = py.y; o._magT = gs.time; }
+    }
+  }
+}
+
+function updateRamps(floor, ball) {
+  for (const rp of (floor.ramps || [])) {
+    const over = ball.x >= rp.x && ball.x <= rp.x + rp.w && ball.y >= rp.y && ball.y <= rp.y + rp.h;
+    if (over && !rp._in && ball.z <= 0) {
+      const along = ball.vx * rp.dir.x + ball.vy * rp.dir.y;
+      if (ball.launchTiles && along > CONFIG.rampMinSpeed) {
+        // Launcher-powered: a measured ballistic flight that lands in the
+        // centre of the Nth square past the ramp's takeoff edge
+        const ts   = CONFIG.tileSize;
+        const d    = rp.dir;
+        const edge = d.x > 0 ? rp.x + rp.w : d.x < 0 ? rp.x
+                   : d.y > 0 ? rp.y + rp.h : rp.y;
+        const pos    = d.x !== 0 ? ball.x : ball.y;
+        const toEdge = Math.max(0, (edge - pos) * (d.x + d.y));
+        const D      = toEdge + (ball.launchTiles - 0.5) * ts;
+        const v      = CONFIG.flightSpeed;
+        ball.vx = d.x * v;
+        ball.vy = d.y * v;
+        ball.vz = CONFIG.gravityZ * (D / v) / 2;   // airborne exactly D/v seconds
+        ball.flight = { landX: ball.x + d.x * D, landY: ball.y + d.y * D };
+        ball.launchTiles = 0;
+        playSpringSound();
+      } else if (along > CONFIG.rampMinSpeed) {
+        ball.vz = along * CONFIG.rampLift;
+        playSpringSound(0.5);
+      }
+    }
+    rp._in = over;
+  }
+}
+
+function updatePickups(floor, ball) {
+  const fi = gs.floor;
+  for (const p of (floor.pickups || [])) {
+    const over = Math.hypot(ball.x - p.x, ball.y - p.y) < 30 + CONFIG.ballRadius;
+    if (p.type === 'magnet') {
+      // Reusable activator: grants timed magnetism, roll over again to re-arm
+      if (over && !p._in) {
+        gs.magnetUntil = gs.time + CONFIG.magnetDuration;
+        playPickupSound();
+      }
+      p._in = over;
+      continue;
+    }
+    if (gs.collected[fi][p.id]) continue;
+    if (over) {
+      gs.collected[fi][p.id] = true;
+      gs.strongBall = true;
+      playPickupSound();
+    }
+  }
+}
+
+function playSpringSound(scale = 1) {
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(620, t + 0.16);
+    g.gain.setValueAtTime(0.30 * CONFIG.sfxVolume * scale, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    osc.start(t); osc.stop(t + 0.22);
+  } catch (_) {}
+}
+
+function playPickupSound() {
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    [[880, 0], [1320, 0.08]].forEach(([f, dly]) => {
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, t + dly);
+      g.gain.setValueAtTime(0.22 * CONFIG.sfxVolume, t + dly);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dly + 0.3);
+      osc.start(t + dly); osc.stop(t + dly + 0.3);
+    });
+  } catch (_) {}
+}
+
+function playBridgeSound(collapsed) {
+  if (collapsed) { playBrickSound(true); return; }
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(95, t);
+    osc.frequency.exponentialRampToValueAtTime(70, t + 0.14);
+    g.gain.setValueAtTime(0.10 * CONFIG.sfxVolume, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    osc.start(t); osc.stop(t + 0.16);
+  } catch (_) {}
+}
+
+// ── Death (lava / pits) ──────────────────────────────────────────
+const deathFx = [];   // screen-space flame particles
+
+function startDeath(type) {
+  if (gs.dying) return;
+  gs.dying = { type, t: 0, x: gs.ball.x, y: gs.ball.y, shown: false };
+  gs.ball.vx = 0;
+  gs.ball.vy = 0;
+  playDeathSound(type);
+  if (type === 'lava') spawnFlameBurst();
+}
+
+function spawnFlameBurst() {
+  const p = isoProject(gs.ball.x, gs.ball.y, 0);
+  for (let i = 0; i < 30; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 30 + Math.random() * 140;
+    deathFx.push({
+      x: p.x, y: p.y - 8,
+      vx: Math.cos(ang) * spd * 0.7,
+      vy: -Math.abs(Math.sin(ang)) * spd - 40,   // flames rise
+      r: 3 + Math.random() * 5,
+      life: 0.5 + Math.random() * 0.6,
+      maxLife: 1,
+    });
+  }
+  for (const fx of deathFx) fx.maxLife = fx.life;
+}
+
+function updateDeathFx(dt) {
+  for (let i = deathFx.length - 1; i >= 0; i--) {
+    const fx = deathFx[i];
+    fx.life -= dt;
+    if (fx.life <= 0) { deathFx.splice(i, 1); continue; }
+    fx.x += fx.vx * dt;
+    fx.y += fx.vy * dt;
+    fx.vy -= 30 * dt;   // updraft
+  }
+}
+
+function drawDeathFx() {
+  for (const fx of deathFx) {
+    const k = fx.life / fx.maxLife;   // 1 → 0
+    ctx.beginPath();
+    ctx.arc(fx.x, fx.y, fx.r * (0.4 + k * 0.6), 0, Math.PI * 2);
+    ctx.fillStyle = k > 0.55
+      ? `rgba(255,${Math.round(140 + k * 90)},40,${(k * 0.95).toFixed(3)})`
+      : `rgba(${Math.round(90 + k * 160)},${Math.round(30 + k * 60)},20,${(k * 0.9).toFixed(3)})`;
+    ctx.fill();
+  }
+}
+
+function updateDeath(dt) {
+  if (!gs.dying) return;
+  gs.dying.t += dt;
+  if (gs.dying.t > 1.25 && !gs.dying.shown) {
+    gs.dying.shown = true;
+    const lava = gs.dying.type === 'lava';
+    document.getElementById('death-title').textContent = lava ? 'BURNED TO ASH' : 'INTO THE VOID';
+    document.getElementById('death-sub').textContent   = lava
+      ? 'The lava claims another marble.'
+      : 'A bottomless pit. Emphasis on bottomless.';
+    document.getElementById('death-screen').style.display = 'flex';
+  }
+}
+
+function hideDeathUI() {
+  document.getElementById('death-screen').style.display = 'none';
+  deathFx.length = 0;
+}
+
+function restartFloor() {
+  const fi = gs.floor, f = floors[fi];
+  gs.activated[fi] = {};
+  gs.inside[fi]    = {};
+  gs.wallHp[fi]    = freshWallHp(f);
+  gs.doorState[fi] = freshDoorState(f);
+  gs.bridgeUses[fi] = (f.bridges || []).map(b => b.uses);
+  gs.collected[fi]  = {};
+  gs.strongBall     = false;
+  gs.magnetUntil    = -1;
+  for (const L of (f.launchers || []))  { L.x = L.homeX;  L.y = L.homeY;  L.on = false; }
+  for (const rp of (f.ramps || []))     { rp.x = rp.homeX; rp.y = rp.homeY; }
+  gs.ball.flight = null; gs.ball.launchTiles = 0;
+  for (const p of (f.pickups || []))    { if (p.type === 'magnet') p._in = false; }
+  if (f.requireSequence) gs.seqProgress = 0;
+  gs.ball.x = f.startX; gs.ball.y = f.startY;
+  gs.ball.vx = 0; gs.ball.vy = 0; gs.ball.z = 0; gs.ball.vz = 0;
+  gs.dying = null;
+  hideDeathUI();
+  snapCamera();
+  updateFloorLabel();
+}
+
+function playDeathSound(type) {
+  try {
+    const ac = getAudioCtx();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime, v = CONFIG.sfxVolume;
+    if (type === 'pit') {
+      // Long falling whistle
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(340, t);
+      osc.frequency.exponentialRampToValueAtTime(38, t + 1.1);
+      g.gain.setValueAtTime(0.30 * v, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+      osc.start(t); osc.stop(t + 1.1);
+    } else {
+      // Lava: filtered noise burst + low rumble
+      const len = Math.floor(ac.sampleRate * 0.6);
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.6);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const flt = ac.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = 900;
+      const g = ac.createGain();
+      src.connect(flt); flt.connect(g); g.connect(ac.destination);
+      g.gain.setValueAtTime(0.5 * v, t);
+      src.start(t);
+      const osc = ac.createOscillator(), g2 = ac.createGain();
+      osc.connect(g2); g2.connect(ac.destination);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(70, t);
+      g2.gain.setValueAtTime(0.22 * v, t);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+      osc.start(t); osc.stop(t + 0.7);
+    }
+  } catch (_) {}
+}
+
+// ── Isometric projection ─────────────────────────────────────────
+// World stays a flat x/y plane; rendering projects through a 2:1 iso
+// camera that can rotate in 90° snaps around the view focus.
+const ISO_Y = 0.5;   // vertical squash of the ground plane
+
+function viewAngle() { return gs ? gs.viewAngle : 0; }
+
+function isoProject(wx, wy, wz = 0) {
+  const a  = viewAngle();
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const dx = wx - gs.camera.x, dy = wy - gs.camera.y;
+  const rx = dx * ca - dy * sa;
+  const ry = dx * sa + dy * ca;
+  return {
+    x: W / 2 + (rx - ry),
+    y: H / 2 + (rx + ry) * ISO_Y - wz,
+  };
+}
+
+// Painter's-algorithm sort key: larger = nearer the viewer
+function isoDepth(wx, wy) {
+  const a  = viewAngle();
+  const ca = Math.cos(a), sa = Math.sin(a);
+  return (wx * ca - wy * sa) + (wx * sa + wy * ca);
+}
+
+// Convert a screen-space input direction (joystick/tilt/keys) into a
+// world-space direction of the same magnitude, honouring view rotation.
+function screenDirToWorld(ix, iy) {
+  const mag = Math.hypot(ix, iy);
+  if (mag === 0) return [0, 0];
+  const rx = ix / 2 + iy;       // invert sx = rx − ry, sy = (rx + ry)·ISO_Y
+  const ry = iy - ix / 2;
+  const a  = viewAngle();
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const wx =  rx * ca + ry * sa;
+  const wy = -rx * sa + ry * ca;
+  const wmag = Math.hypot(wx, wy) || 1;
+  return [wx / wmag * mag, wy / wmag * mag];
+}
+
+function rotateView(dir) {
+  if (!gs || gs.ended) return;
+  gs.viewTarget += dir;
+}
+
+function updateView(dt) {
+  const target = gs.viewTarget * Math.PI / 2;
+  const t = 1 - Math.exp(-CONFIG.viewRotateSpeed * dt);
+  gs.viewAngle += (target - gs.viewAngle) * t;
+  if (Math.abs(target - gs.viewAngle) < 0.0005) gs.viewAngle = target;
+}
+
+// ── Surface Detection ────────────────────────────────────────────
+function getSurfaceType(ball, floor) {
+  for (const ps of (floor.platformStructures || [])) {
+    if (ball.x >= ps.x && ball.x < ps.x + ps.w &&
+        ball.y >= ps.y && ball.y < ps.y + ps.h) return 'platform';
+  }
+  return 'floor';
+}
+
+// ── Trigger puzzle logic ─────────────────────────────────────────
+function exitUnlocked(fi) {
+  const f = floors[fi];
+  if (!f.triggers || f.triggers.length === 0) return true;
+  if (f.requireSequence) return gs.seqProgress >= f.triggers.length;
+  return f.triggers.every(t => gs.activated[fi][t.id]);
+}
+
+function activatedCount(fi) {
+  const f = floors[fi];
+  return f.triggers.filter(t => gs.activated[fi][t.id]).length;
+}
+
+function fireTrigger(fi, trig) {
+  const f   = floors[fi];
+  const act = gs.activated[fi];
+  if (act[trig.id]) return;  // already lit
+
+  if (f.requireSequence) {
+    if (trig.order === gs.seqProgress) {
+      act[trig.id] = true;
+      gs.seqProgress++;
+      playTriggerSound(gs.seqProgress);
+      if (exitUnlocked(fi)) playUnlockSound();
+    } else {
+      // Wrong order — everything resets
+      for (const t of f.triggers) act[t.id] = false;
+      gs.seqProgress = 0;
+      playErrorSound();
+    }
+  } else {
+    act[trig.id] = true;
+    playTriggerSound(activatedCount(fi));
+    if (exitUnlocked(fi)) playUnlockSound();
+  }
+  updateFloorLabel();
+}
+
+function updateTriggers() {
+  const fi    = gs.floor;
+  const floor = floors[fi];
+  if (!floor.triggers || !floor.triggers.length) return;
+  const ball = gs.ball;
+  for (const t of floor.triggers) {
+    const over = Math.hypot(ball.x - t.x, ball.y - t.y) < t.r;
+    const was  = gs.inside[fi][t.id];
+    if (over && !was) fireTrigger(fi, t);   // fire on enter edge only
+    gs.inside[fi][t.id] = over;             // must roll off before it can fire again
+  }
+}
+
+// ── Game state ───────────────────────────────────────────────────
+function createGS() {
+  const f = floors[0];
+  return {
+    floor:         0,
+    ball:          { x: f.startX, y: f.startY, vx: 0, vy: 0, z: 0, vz: 0 },
+    camera:        { x: f.startX, y: f.startY },   // world-space view focus
+    viewTarget:    0,      // quarter-turn count (unbounded; ×90° = heading)
+    viewAngle:     0,      // current animated heading in radians
+    paused:        false,
+    mapOpen:       false,
+    mapAlpha:      0,
+    transitioning: false,
+    transAlpha:    0,      // 0=clear, 1=black
+    transDir:      1,      // 1=fade-out, -1=fade-in
+    ended:         false,
+    endFade:       0,
+    surface:       'floor',
+    time:          0,      // world clock (drives moving platforms, lava glow)
+    runTime:       0,      // run timer — active play only (pauses/menus freeze it)
+    dying:         null,   // { type, t, x, y, shown } during a death animation
+    // Trigger puzzle state (survives buildFloors() on resize — keyed by stable ids)
+    activated:     floors.map(() => ({})),  // per-floor { triggerId: true }
+    inside:        floors.map(() => ({})),  // per-floor { triggerId: true } — ball overlap, for enter-edge detection
+    seqProgress:   0,                       // floor 4: how many sequence triggers hit in order
+    wallHp:        floors.map(freshWallHp),    // per-floor brick wall hit points
+    doorState:     floors.map(freshDoorState), // per-floor inner-door state
+    bridgeUses:    floors.map(f => (f.bridges || []).map(b => b.uses)),
+    collected:     floors.map(() => ({})),     // per-floor { pickupId: true }
+    strongBall:    false,                      // next brick impact smashes in one hit
+    magnetUntil:   -1,                         // gs.time when timed magnetism expires
+  };
+}
+
+function resetGame() {
+  buildFloors();
+  gs = createGS();
+  snapCamera();
+  updateFloorLabel();
+  hideDeathUI();
+  document.getElementById('end-screen').style.display = 'none';
+  const mapBtn = document.getElementById('map-btn');
+  mapBtn.textContent = 'MAP';
+  mapBtn.classList.remove('open');
+  lastTime = null;
+  hideHint();
+}
+
+// ── Input ────────────────────────────────────────────────────────
+const keys = { ArrowLeft:false, ArrowRight:false, ArrowUp:false, ArrowDown:false };
+
+const joy = {
+  active:  false,
+  touchId: null,
+  baseX:   0,
+  baseY:   0,
+  dx:      0,   // -1 to 1
+  dy:      0,
+};
+
+// Pause button display geometry
+const PAUSE_GFX = { cx:0, cy:0, r:32 };
+
+function resizeControls() {
+  PAUSE_GFX.cx = W - PAUSE_GFX.r - 24;
+  PAUSE_GFX.cy = H - PAUSE_GFX.r - 56;
+}
+
+function setJoystickFromPos(tx, ty) {
+  const dx  = tx - joy.baseX;
+  const dy  = ty - joy.baseY;
+  const len = Math.hypot(dx, dy);
+  const max = CONFIG.joystickRadius;
+  if (len < 6) { joy.dx = 0; joy.dy = 0; return; }
+  const clamped = Math.min(len, max);
+  if (CONFIG.joystickSnap8) {
+    // Snap to the 8 world-grid directions (axes + diagonals), then steer
+    // along their screen projections — so the snapped headings match the
+    // grid lines the player sees, not abstract 45° screen angles
+    const [wx, wy] = screenDirToWorld(dx, dy);
+    const ang = Math.round(Math.atan2(wy, wx) / (Math.PI / 4)) * (Math.PI / 4);
+    const swx = Math.cos(ang), swy = Math.sin(ang);
+    // world dir → screen dir (same mapping as isoProject's ground plane)
+    const a  = viewAngle();
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const rx = swx * ca - swy * sa;
+    const ry = swx * sa + swy * ca;
+    const sx = rx - ry, sy = (rx + ry) * ISO_Y;
+    const slen = Math.hypot(sx, sy) || 1;
+    joy.dx = (sx / slen) * (clamped / max);
+    joy.dy = (sy / slen) * (clamped / max);
+  } else {
+    joy.dx = (dx / len) * (clamped / max);
+    joy.dy = (dy / len) * (clamped / max);
+  }
+}
+
+// Two-finger twist — rotates the iso view in 90° snaps
+const twist = { active: false, lastAngle: 0, accum: 0 };
+function touchPairAngle(touches) {
+  return Math.atan2(touches[1].clientY - touches[0].clientY,
+                    touches[1].clientX - touches[0].clientX);
+}
+
+// Touch
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  hideHint();
+
+  // A second finger starts a twist gesture and cancels the joystick
+  if (e.touches.length === 2) {
+    twist.active    = true;
+    twist.lastAngle = touchPairAngle(e.touches);
+    twist.accum     = 0;
+    joy.active = false; joy.touchId = null; joy.dx = 0; joy.dy = 0;
+    return;
+  }
+
+  for (const t of e.changedTouches) {
+    const tx = t.clientX, ty = t.clientY;
+
+    // Pause button hit test
+    if (Math.hypot(tx - PAUSE_GFX.cx, ty - PAUSE_GFX.cy) < PAUSE_GFX.r + 12) {
+      if (gs) gs.paused = !gs.paused;
+      continue;
+    }
+
+    // Any non-pause touch becomes the joystick anchor
+    if (!joy.active && !twist.active) {
+      joy.active  = true;
+      joy.touchId = t.identifier;
+      joy.baseX   = tx;
+      joy.baseY   = ty;
+      joy.dx      = 0;
+      joy.dy      = 0;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (twist.active && e.touches.length >= 2) {
+    const ang  = touchPairAngle(e.touches);
+    let delta  = ang - twist.lastAngle;
+    if (delta >  Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    twist.lastAngle = ang;
+    twist.accum    += delta;
+    const STEP = 0.55;     // rad of finger twist per 90° view snap
+    while (twist.accum >  STEP) { rotateView(1);  twist.accum -= STEP; }
+    while (twist.accum < -STEP) { rotateView(-1); twist.accum += STEP; }
+    return;
+  }
+  for (const t of e.changedTouches) {
+    if (t.identifier === joy.touchId) setJoystickFromPos(t.clientX, t.clientY);
+  }
+}, { passive: false });
+
+function touchEndHandler(e) {
+  e.preventDefault();
+  if (e.touches.length < 2) twist.active = false;
+  for (const t of e.changedTouches) {
+    if (t.identifier === joy.touchId) {
+      joy.active = false; joy.touchId = null; joy.dx = 0; joy.dy = 0;
+    }
+  }
+}
+canvas.addEventListener('touchend',    touchEndHandler, { passive: false });
+canvas.addEventListener('touchcancel', touchEndHandler, { passive: false });
+
+// Mouse (desktop)
+let mouseDragging = false;
+canvas.addEventListener('mousedown', e => {
+  hideHint();
+  const mx = e.clientX, my = e.clientY;
+  if (Math.hypot(mx - PAUSE_GFX.cx, my - PAUSE_GFX.cy) < PAUSE_GFX.r + 12) {
+    if (gs) gs.paused = !gs.paused;
+    return;
+  }
+  // Set anchor at click position — VS-style
+  mouseDragging = true;
+  joy.active    = true;
+  joy.baseX     = mx;
+  joy.baseY     = my;
+  joy.dx        = 0;
+  joy.dy        = 0;
+});
+window.addEventListener('mousemove', e => {
+  if (mouseDragging) setJoystickFromPos(e.clientX, e.clientY);
+});
+window.addEventListener('mouseup', () => {
+  mouseDragging = false;
+  joy.active = false;
+  joy.dx = 0;
+  joy.dy = 0;
+});
+
+// Keyboard
+window.addEventListener('keydown', e => {
+  if (e.key in keys) { keys[e.key] = true; hideHint(); }
+  if (e.key === ' ')                   { if (gs) gs.paused = !gs.paused; }
+  if (e.key === 'r' || e.key === 'R')  resetGame();
+  if (e.key === 'q' || e.key === 'Q')  rotateView(-1);
+  if (e.key === 'e' || e.key === 'E')  rotateView(1);
+});
+window.addEventListener('keyup', e => {
+  if (e.key in keys) keys[e.key] = false;
+});
+
+// Device tilt
+const tilt = { enabled: false, x: 0, y: 0, betaOffset: null, usingMotion: false };
+
+// Small debug overlay — visible while tilt is on so sensor state is always readable
+const tiltDbg = { el: null };
+function showTiltDebug(text) {
+  if (!tiltDbg.el) {
+    tiltDbg.el = document.createElement('div');
+    Object.assign(tiltDbg.el.style, {
+      position: 'fixed', bottom: '8px', right: '8px',
+      background: 'rgba(0,0,0,0.65)', color: 'rgba(255,255,255,0.65)',
+      fontFamily: 'monospace', fontSize: '10px',
+      padding: '4px 8px', borderRadius: '8px',
+      pointerEvents: 'none', zIndex: '999', whiteSpace: 'nowrap',
+    });
+    document.body.appendChild(tiltDbg.el);
+  }
+  tiltDbg.el.textContent = text;
+}
+function hideTiltDebug() {
+  if (tiltDbg.el) { tiltDbg.el.remove(); tiltDbg.el = null; }
+}
+
+function applyScreenAngle(rawGammaOrX, rawBetaOrY) {
+  const angle = screen.orientation?.angle ?? window.orientation ?? 0;
+  if (angle === 90)                        return [  rawBetaOrY, -rawGammaOrX ];
+  if (angle === -90 || angle === 270)      return [ -rawBetaOrY,  rawGammaOrX ];
+  if (Math.abs(angle) === 180)             return [ -rawGammaOrX, -rawBetaOrY ];
+  return [ rawGammaOrX, rawBetaOrY ];
+}
+
+function onOrientation(e) {
+  // Null values mean no gyroscope — fall back to accelerometer
+  if (e.gamma === null && e.beta === null) {
+    window.removeEventListener('deviceorientation', onOrientation);
+    window.addEventListener('devicemotion', onMotion, { passive: true });
+    tilt.usingMotion = true;
+    showTiltDebug('no gyro — trying accelerometer…');
+    return;
+  }
+
+  const [rawX, rawY] = applyScreenAngle(e.gamma || 0, e.beta || 0);
+  if (tilt.betaOffset === null) tilt.betaOffset = rawY;
+
+  const MAX_ANGLE = 28;
+  tilt.x = Math.max(-1, Math.min(1,  rawX / MAX_ANGLE));
+  tilt.y = Math.max(-1, Math.min(1, (rawY - tilt.betaOffset) / MAX_ANGLE));
+
+  const g = (e.gamma || 0).toFixed(0), b = (e.beta || 0).toFixed(0);
+  showTiltDebug(`gyro γ${g} β${b} → ${tilt.x.toFixed(2)}, ${tilt.y.toFixed(2)}`);
+}
+
+function onMotion(e) {
+  const acc = e.accelerationIncludingGravity;
+  if (!acc || acc.x === null) { showTiltDebug('NO SENSOR DATA'); return; }
+
+  // Gravity vector gives tilt angle: sin(θ) ≈ a / g
+  const [rawX, rawY] = applyScreenAngle(
+    ( acc.x || 0) / 9.81,
+    (-acc.y || 0) / 9.81   // y axis is inverted vs gamma convention
+  );
+
+  if (tilt.betaOffset === null) tilt.betaOffset = rawY;
+  tilt.x = Math.max(-1, Math.min(1, rawX));
+  tilt.y = Math.max(-1, Math.min(1, rawY - tilt.betaOffset));
+
+  showTiltDebug(`accel x${(acc.x||0).toFixed(1)} y${(acc.y||0).toFixed(1)} → ${tilt.x.toFixed(2)}, ${tilt.y.toFixed(2)}`);
+}
+
+function enableTilt() {
+  const btn = document.getElementById('tilt-btn');
+  if (tilt.enabled) {
+    tilt.enabled = false;
+    tilt.usingMotion = false;
+    btn.textContent = 'TILT: OFF';
+    btn.classList.remove('active');
+    window.removeEventListener('deviceorientation', onOrientation);
+    window.removeEventListener('devicemotion', onMotion);
+    hideTiltDebug();
+    return;
+  }
+  function startListening() {
+    tilt.enabled    = true;
+    tilt.usingMotion = false;
+    tilt.betaOffset = null;
+    btn.textContent = 'TILT: ON';
+    btn.classList.add('active');
+    showTiltDebug('waiting for sensor…');
+    window.addEventListener('deviceorientation', onOrientation);
+  }
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(s => { if (s === 'granted') startListening(); });
+  } else {
+    startListening();
+  }
+}
+
+// Re-calibrate when screen rotates
+window.addEventListener('orientationchange', () => { if (tilt.enabled) tilt.betaOffset = null; });
+if (screen.orientation) {
+  screen.orientation.addEventListener('change', () => { if (tilt.enabled) tilt.betaOffset = null; });
+}
+
+// ── Physics ──────────────────────────────────────────────────────
+// Circle-vs-rect collision: separates the ball and reflects velocity.
+// Returns { impact, cx, cy } when touching, else null.
+function collideBallWithRect(ball, ps) {
+  const r  = CONFIG.ballRadius;
+  const cx = Math.max(ps.x, Math.min(ball.x, ps.x + ps.w));
+  const cy = Math.max(ps.y, Math.min(ball.y, ps.y + ps.h));
+  const dx = ball.x - cx;
+  const dy = ball.y - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= 0 || dist >= r) return null;
+  const nx = dx / dist, ny = dy / dist;
+  ball.x = cx + nx * r;
+  ball.y = cy + ny * r;
+  const vdn = ball.vx * nx + ball.vy * ny;
+  if (vdn < 0) {
+    ball.vx -= (1 + CONFIG.wallBounce) * vdn * nx;
+    ball.vy -= (1 + CONFIG.wallBounce) * vdn * ny;
+    onBounce(cx, cy, Math.abs(vdn));
+    return { impact: Math.abs(vdn), cx, cy };
+  }
+  return { impact: 0, cx, cy };
+}
+
+function updatePhysics(dt) {
+  if (!gs || gs.transitioning || gs.ended || gs.dying) return;
+
+  const ball  = gs.ball;
+  const floor = floors[gs.floor];
+  const wt    = CONFIG.wallThickness;
+  const r     = CONFIG.ballRadius;
+
+  // Surface detection (always current, even while paused)
+  gs.surface = getSurfaceType(ball, floor);
+
+  if (gs.paused || gs.mapOpen) {
+    // Anchor: brake the ball
+    ball.vx *= CONFIG.pauseBraking;
+    ball.vy *= CONFIG.pauseBraking;
+    if (Math.abs(ball.vx) < 0.5) ball.vx = 0;
+    if (Math.abs(ball.vy) < 0.5) ball.vy = 0;
+    return;
+  }
+
+  gs.runTime += dt;
+
+  // ── Gather input
+  // Joystick (mouse/touch) is handled separately as direct drive;
+  // tilt and keys remain physical thrust and share ax/ay.
+  let ax = 0, ay = 0;
+  let joyMag = 0, jwx = 0, jwy = 0;   // joystick: magnitude + world direction
+  const joyDrive = joy.active;        // servo runs while held, even centred (active brake)
+
+  if (joy.active) {
+    const defl = Math.min(1, Math.hypot(joy.dx, joy.dy));
+    if (defl > 0.001) {
+      // Sensitivity shapes the deflection→speed curve: 2.5 = linear,
+      // lower values flatten the low end for finer close-range control
+      joyMag = Math.pow(defl, 2.5 / Math.max(0.3, CONFIG.joystickSensitivity));
+      [jwx, jwy] = screenDirToWorld(joy.dx / defl, joy.dy / defl);
+    }
+  }
+  if (tilt.enabled) {
+    ax += tilt.x * CONFIG.tiltSensitivity;
+    ay += tilt.y * CONFIG.tiltSensitivity;
+  }
+
+  // Keyboard: normalize diagonal so it isn't faster than cardinal
+  const kx = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0);
+  const ky = (keys.ArrowDown  ? 1 : 0) - (keys.ArrowUp   ? 1 : 0);
+  const kLen = Math.hypot(kx, ky);
+  if (kLen > 0) {
+    ax += (kx / kLen) * CONFIG.keyboardSensitivity;
+    ay += (ky / kLen) * CONFIG.keyboardSensitivity;
+  }
+  // Clamp intent to unit length: sensitivity shapes how fast partial
+  // deflection/tilt reaches full power, never overdrives acceleration
+  let inLen = Math.hypot(ax, ay);
+  if (inLen > 1) { ax /= inLen; ay /= inLen; inLen = 1; }
+
+  // All inputs express screen-space intent; map through the iso camera
+  [ax, ay] = screenDirToWorld(ax, ay);
+
+  // ── Moving platforms, bridges & surface tiles ──────────────────
+  // Surface is resolved before thrust so traction can scale the input
+  updateMovers(floor, dt);
+  const mover = moverUnder(floor, ball);
+  let feel = null;   // entry from CONFIG.surfaceFeel, or null on plain floor
+  if (mover) {
+    // Carried by the platform; its surface is high-friction
+    ball.x += mover.dx;
+    ball.y += mover.dy;
+    feel       = CONFIG.surfaceFeel.mover;
+    gs.surface = 'mover';
+  } else if (bridgeUnder(floor, ball)) {
+    gs.surface = 'bridge';   // safe planking over whatever lies beneath
+  } else if (ball.z <= 1) {
+    const tt = tileTypeAt(floor, ball.x, ball.y);
+    if (tt === 'lava' || tt === 'pit') { startDeath(tt); return; }
+    feel = CONFIG.surfaceFeel[tt] || null;
+    if (tt !== 'normal') gs.surface = tt;
+  }
+  const frictionMul = feel ? feel.fric  : 1;
+  const capMul      = feel ? feel.cap   : 1;
+  const accelMul    = feel ? feel.accel : 1;
+
+  // A measured flight (launcher → ramp) is ballistic, and the spring-driven
+  // dash before it is locked the same way: no steering, friction or speed
+  // cap until the flight lands / the charge runs out of range
+  const inFlight = !!ball.flight;
+  const armed    = !inFlight && !!ball.launchTiles;
+  const locked   = inFlight || armed;
+
+  if (inLen > 0.01 && !locked) {
+    // Tilt/keys thrust. Steering against current motion brakes harder
+    // than it accelerates, so reversing feels responsive instead of mushy.
+    // Low-traction surfaces (ice) skip the boost: you ride your momentum.
+    const spd0 = Math.hypot(ball.vx, ball.vy);
+    let boost = 1;
+    if (spd0 > 1 && !(feel && feel.noBrake)) {
+      const dot = (ax * ball.vx + ay * ball.vy) / (inLen * spd0);
+      if (dot < 0) boost = 1 - dot * (CONFIG.brakeBoost - 1);
+    }
+    ball.vx += ax * CONFIG.acceleration * accelMul * boost * dt;
+    ball.vy += ay * CONFIG.acceleration * accelMul * boost * dt;
+  }
+
+  if (joyDrive && !locked) {
+    // Joystick direct drive: converge on deflection × top speed — and on
+    // a target of zero while held centred, so the ball stops on a dime.
+    // Diagonals (odd 45° octants) get their own speed/response tuning
+    // so cornering between grid directions is a little more forgiving.
+    const oct  = Math.round(Math.atan2(jwy, jwx) / (Math.PI / 4));
+    const diag = joyMag > 0 && (oct & 1) !== 0;
+    const tv   = CONFIG.maxSpeed * capMul * joyMag * (diag ? CONFIG.joyDiagSpeed : 1);
+    const rate = CONFIG.joyResponse * accelMul * (diag ? CONFIG.joyDiagResponse : 1);
+    const k    = 1 - Math.exp(-rate * dt);
+    ball.vx += (jwx * tv - ball.vx) * k;
+    ball.vy += (jwy * tv - ball.vy) * k;
+  }
+
+  // Speed cap
+  const cap = CONFIG.maxSpeed * capMul;
+  const spd = Math.hypot(ball.vx, ball.vy);
+  if (spd > cap && !locked) {
+    ball.vx = (ball.vx / spd) * cap;
+    ball.vy = (ball.vy / spd) * cap;
+  }
+
+  // Friction (applied before move so we can still build speed each frame)
+  // Idle friction is stronger so the ball settles when you let go;
+  // frictionMul keeps ice slick / mud sticky in both cases.
+  // Exponent makes the decay frame-rate independent (values are 60fps refs).
+  const base = (inLen > 0.01 || joyDrive) ? CONFIG.friction : CONFIG.idleFriction;
+  const fr = Math.pow(Math.max(0, 1 - (1 - base) * frictionMul), dt * 60);
+  if (!locked) {
+    ball.vx *= fr;
+    ball.vy *= fr;
+  }
+
+  // The spring charge carries the ball up to its power in squares on the
+  // flat; if no ramp converts it to a flight by then, it's spent
+  if (armed) {
+    ball.launchDist -= Math.hypot(ball.vx, ball.vy) * dt;
+    if (ball.launchDist <= 0) ball.launchTiles = 0;
+  }
+
+  // Integrate position
+  ball.x += ball.vx * dt;
+  ball.y += ball.vy * dt;
+
+  // Airborne arc (from ramps)
+  if (ball.z > 0 || ball.vz > 0) {
+    ball.z  += ball.vz * dt;
+    ball.vz -= CONFIG.gravityZ * dt;
+    if (ball.z <= 0) {
+      ball.z = 0; ball.vz = 0;
+      if (ball.flight) {
+        const fl = ball.flight;
+        // Snap to the computed landing square unless a mid-air bounce diverted us
+        if (Math.hypot(fl.landX - ball.x, fl.landY - ball.y) < CONFIG.tileSize * 0.45) {
+          ball.x = fl.landX; ball.y = fl.landY;
+        }
+        ball.flight = null;
+      }
+      onBounce(ball.x, ball.y, 90);
+    }
+  }
+
+  // ── Wall collisions ──────────────────────────────────────────
+  // Left wall
+  if (ball.x - r < wt) {
+    const imp = Math.abs(ball.vx);
+    ball.x  = wt + r;
+    ball.vx = imp * CONFIG.wallBounce;
+    onBounce(wt, ball.y, imp);
+  }
+  // Top wall
+  if (ball.y - r < wt) {
+    const imp = Math.abs(ball.vy);
+    ball.y  = wt + r;
+    ball.vy = imp * CONFIG.wallBounce;
+    onBounce(ball.x, wt, imp);
+  }
+  // Bottom wall
+  if (ball.y + r > floor.height - wt) {
+    const imp = Math.abs(ball.vy);
+    ball.y  = floor.height - wt - r;
+    ball.vy = -imp * CONFIG.wallBounce;
+    onBounce(ball.x, floor.height - wt, imp);
+  }
+  // Right wall (with door gap on floor 2)
+  const rightInner = floor.width - wt;
+  if (ball.x + r > rightInner) {
+    const door = floor.door;
+    if (door && door.wall === 'right' && exitUnlocked(gs.floor)) {
+      const inGap = ball.y > door.center - door.width / 2 &&
+                    ball.y < door.center + door.width / 2;
+      if (inGap) {
+        triggerEnd();
+        return;
+      }
+    }
+    const imp = Math.abs(ball.vx);
+    ball.x  = rightInner - r;
+    ball.vx = -imp * CONFIG.wallBounce;
+    onBounce(rightInner, ball.y, imp);
+  }
+
+  // ── Platform, inner-wall & door collisions ─────────────────────
+  for (const ps of (floor.platformStructures || [])) collideBallWithRect(ball, ps);
+
+  floor.innerWalls.forEach((iw, i) => {
+    if (iw.material === 'brick' && gs.wallHp[gs.floor][i] <= 0) return;   // breached
+    const hit = collideBallWithRect(ball, iw);
+    if (hit && iw.material === 'brick' && hit.impact >= CONFIG.brickHitSpeed) damageBrick(gs.floor, i);
+  });
+
+  for (const d of (floor.doors || [])) {
+    if (doorBlocksBall(d, ball)) collideBallWithRect(ball, d);
+  }
+  updateDoors(floor, ball);
+
+  // ── Items ────────────────────────────────────────────────────
+  for (const L of (floor.launchers || [])) handleLauncherCollision(ball, L, floor);
+  for (const rp of (floor.ramps || [])) handleRampCollision(ball, rp, floor);
+  updateMagnet(floor, ball, dt);
+  updateLauncherSwitches(floor, ball);
+  updateBridges(floor, ball);
+  updateRamps(floor, ball);
+  updatePickups(floor, ball);
+
+  // ── Trigger pads ────────────────────────────────────────────
+  updateTriggers();
+
+  // ── Hole check — only swallows the ball once unlocked ────────
+  if (floor.hole && exitUnlocked(gs.floor)) {
+    const d = Math.hypot(ball.x - floor.hole.x, ball.y - floor.hole.y);
+    if (d < floor.hole.r - r * 0.4) {
+      // A hole on the last floor (test levels) finishes the run
+      if (gs.floor >= floors.length - 1) triggerEnd();
+      else triggerTransition();
+    }
+  }
+}
+
+// ── Transitions ──────────────────────────────────────────────────
+const FADE_SPEED = 2.8; // alpha units per second
+
+function triggerTransition() {
+  if (gs.transitioning) return;
+  gs.transitioning = true;
+  gs.transDir      = 1;   // start fading out
+  gs.transAlpha    = 0;
+}
+
+function updateTransition(dt) {
+  if (!gs.transitioning) return;
+  gs.transAlpha += gs.transDir * FADE_SPEED * dt;
+
+  if (gs.transDir === 1 && gs.transAlpha >= 1) {
+    gs.transAlpha = 1;
+    gs.transDir   = -1;  // now fade back in
+    // Descend to the next floor
+    gs.floor = Math.min(gs.floor + 1, floors.length - 1);
+    const f   = floors[gs.floor];
+    gs.ball.x = f.startX;
+    gs.ball.y = f.startY;
+    gs.ball.vx = 0;
+    gs.ball.vy = 0;
+    snapCamera();
+    updateFloorLabel();
+  } else if (gs.transDir === -1 && gs.transAlpha <= 0) {
+    gs.transAlpha  = 0;
+    gs.transitioning = false;
+  }
+}
+
+function fmtTime(t) {
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
+}
+
+let lastTimerText = '';
+function updateTimerLabel() {
+  const txt = fmtTime(gs ? gs.runTime : 0);
+  if (txt === lastTimerText) return;
+  lastTimerText = txt;
+  document.getElementById('timer-label').textContent = txt;
+}
+
+function triggerEnd() {
+  if (gs.ended) return;
+  gs.ended   = true;
+  gs.endFade = 0;
+
+  // Run timer: record and compare against the stored best
+  const t    = gs.runTime;
+  const el   = document.getElementById('end-time');
+  if (TEST_LEVEL) {              // test levels never touch the real best time
+    el.textContent = `Test cleared: ${fmtTime(t)}`;
+    return;
+  }
+  const best = parseFloat(localStorage.getItem('tmBestTime') || 'NaN');
+  if (!(best <= t)) {            // first ever run, or beat the best
+    localStorage.setItem('tmBestTime', String(t));
+    el.textContent = isNaN(best)
+      ? `Your time: ${fmtTime(t)}`
+      : `New best time: ${fmtTime(t)}  (previous ${fmtTime(best)})`;
+  } else {
+    el.textContent = `Your time: ${fmtTime(t)}  ·  Best: ${fmtTime(best)}`;
+  }
+}
+
+function updateEndFade(dt) {
+  if (!gs.ended) return;
+  gs.endFade = Math.min(1, gs.endFade + FADE_SPEED * dt);
+  if (gs.endFade >= 1) {
+    document.getElementById('end-screen').style.display = 'flex';
+  }
+}
+
+// ── Camera ───────────────────────────────────────────────────────
+// The camera is a world-space focus point that trails the ball; the
+// iso projection centres the screen on it.
+function snapCamera() {
+  gs.camera.x = gs.ball.x;
+  gs.camera.y = gs.ball.y;
+}
+
+function updateCamera(dt) {
+  const t = 1 - Math.exp(-CONFIG.cameraSmoothing * dt);
+  gs.camera.x += (gs.ball.x - gs.camera.x) * t;
+  gs.camera.y += (gs.ball.y - gs.camera.y) * t;
+}
+
+// ── Drawing (isometric) ───────────────────────────────────────────
+
+// Trace the projected quad of 4 world-space corners at height wz
+function isoQuadPath(corners, wz) {
+  const p0 = isoProject(corners[0][0], corners[0][1], wz);
+  ctx.beginPath();
+  ctx.moveTo(p0.x, p0.y);
+  for (let i = 1; i < corners.length; i++) {
+    const p = isoProject(corners[i][0], corners[i][1], wz);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+}
+
+// Project a world-space direction (not a point) to screen space
+function dirToScreen(nx, ny) {
+  const a  = viewAngle();
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const rx = nx * ca - ny * sa;
+  const ry = nx * sa + ny * ca;
+  return { x: rx - ry, y: (rx + ry) * ISO_Y };
+}
+
+// Floor slab + tile grid
+function drawFloorBase(floor) {
+  const corners = [[0, 0], [floor.width, 0], [floor.width, floor.height], [0, floor.height]];
+
+  // Slab side below the ground plane — floating-island depth
+  isoQuadPath(corners, -26);
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fill();
+
+  // Ground plane
+  isoQuadPath(corners, 0);
+  ctx.fillStyle = floor.tileColor;
+  ctx.fill();
+
+  // Special surface tiles (mud / ice / lava / pit)
+  if (floor.tiles) {
+    const ts   = CONFIG.tileSize;
+    const time = gs ? gs.time : 0;
+    for (const key in floor.tiles) {
+      const ci = key.indexOf(',');
+      const c  = +key.slice(0, ci), r = +key.slice(ci + 1);
+      const x0 = c * ts, y0 = r * ts;
+      const p  = isoProject(x0 + ts / 2, y0 + ts / 2, 0);
+      if (p.x < -150 || p.x > W + 150 || p.y < -120 || p.y > H + 120) continue;
+
+      const type = floor.tiles[key];
+      isoQuadPath([[x0, y0], [x0 + ts, y0], [x0 + ts, y0 + ts], [x0, y0 + ts]], 0);
+      if (type === 'mud1') {
+        ctx.fillStyle = '#73583a';
+      } else if (type === 'mud2') {
+        ctx.fillStyle = '#5d452c';
+      } else if (type === 'mud3') {
+        ctx.fillStyle = '#44311d';
+      } else if (type === 'ice') {
+        ctx.fillStyle = '#a9cfdf';
+      } else if (type === 'lava') {
+        const g = 0.5 + 0.5 * Math.sin(time * 2.6 + c * 1.7 + r * 2.3);
+        ctx.fillStyle = `rgb(${Math.round(185 + 55 * g)},${Math.round(48 + 62 * g)},12)`;
+      } else {            // pit
+        ctx.fillStyle = '#070707';
+      }
+      ctx.fill();
+
+      if (type === 'ice') {
+        // Sheen streak
+        ctx.beginPath();
+        const s1 = isoProject(x0 + ts * 0.2, y0 + ts * 0.55, 0);
+        const s2 = isoProject(x0 + ts * 0.65, y0 + ts * 0.15, 0);
+        ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y);
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+        ctx.lineWidth   = 2;
+        ctx.stroke();
+      } else if (type === 'lava') {
+        // Bright molten core
+        const g = 0.5 + 0.5 * Math.sin(time * 3.4 + c * 2.9 + r * 1.3);
+        isoQuadPath([[x0 + ts * 0.3, y0 + ts * 0.3], [x0 + ts * 0.7, y0 + ts * 0.3],
+                     [x0 + ts * 0.7, y0 + ts * 0.7], [x0 + ts * 0.3, y0 + ts * 0.7]], 0);
+        ctx.fillStyle = `rgba(255,${Math.round(160 + 60 * g)},60,${(0.35 + 0.4 * g).toFixed(3)})`;
+        ctx.fill();
+      }
+      // pit: surface filled black above; faces drawn after the floor grid
+    }
+  }
+
+  // Tile grid along both world axes
+  const ts = CONFIG.tileSize;
+  ctx.strokeStyle = `rgba(${CONFIG.gridLineColor},${CONFIG.gridLineOpacity})`;
+  ctx.lineWidth   = CONFIG.gridLineThickness;
+  ctx.beginPath();
+  for (let gx = 0; gx <= floor.width; gx += ts) {
+    const a = isoProject(gx, 0, 0), b = isoProject(gx, floor.height, 0);
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+  }
+  for (let gy = 0; gy <= floor.height; gy += ts) {
+    const a = isoProject(0, gy, 0), b = isoProject(floor.width, gy, 0);
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+  }
+  ctx.stroke();
+
+  // Second pass for pit tiles: re-fill black to cover the floor grid on pit surfaces.
+  if (floor.tiles) {
+    const ts2 = CONFIG.tileSize;
+    for (const key in floor.tiles) {
+      if (floor.tiles[key] !== 'pit') continue;
+      const ci = key.indexOf(',');
+      const c  = +key.slice(0, ci), r = +key.slice(ci + 1);
+      const x0 = c * ts2, y0 = r * ts2;
+      const p  = isoProject(x0 + ts2 / 2, y0 + ts2 / 2, 0);
+      if (p.x < -150 || p.x > W + 150 || p.y < -120 || p.y > H + 120) continue;
+      isoQuadPath([[x0, y0], [x0 + ts2, y0], [x0 + ts2, y0 + ts2], [x0, y0 + ts2]], 0);
+      ctx.fillStyle = '#070707';
+      ctx.fill();
+    }
+  }
+}
+
+// Solid box standing on the ground plane — walls, platforms, doors.
+// Only the two camera-facing side faces are drawn, then the top.
+function drawIsoBox(bx, by, bw, bh, hz, topColor, sideLight, sideDark, alpha = 1) {
+  const c  = [[bx, by], [bx + bw, by], [bx + bw, by + bh], [bx, by + bh]];
+  const pb = c.map(([x, y]) => isoProject(x, y, 0));
+
+  // Cull fully off-screen boxes
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of pb) {
+    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+  }
+  if (maxX < -40 || minX > W + 40 || maxY < -40 || minY - hz > H + 40) return;
+
+  const pt = c.map(([x, y]) => isoProject(x, y, hz));
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    // Outward normal of this face; faces pointing toward the camera have n.y > 0
+    const n = dirToScreen(c[j][1] - c[i][1], -(c[j][0] - c[i][0]));
+    if (n.y <= 0.001) continue;
+    ctx.beginPath();
+    ctx.moveTo(pb[i].x, pb[i].y);
+    ctx.lineTo(pb[j].x, pb[j].y);
+    ctx.lineTo(pt[j].x, pt[j].y);
+    ctx.lineTo(pt[i].x, pt[i].y);
+    ctx.closePath();
+    ctx.fillStyle = n.x >= 0 ? sideDark : sideLight;   // light source on the left
+    ctx.fill();
+  }
+
+  isoQuadPath(c, hz);
+  ctx.fillStyle = topColor;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Split a long wall rect into short segments so painter's-algorithm
+// depth sorting against the ball stays correct.
+function wallSegments(rect) {
+  const seg  = CONFIG.tileSize * 2;
+  const segs = [];
+  if (rect.w >= rect.h) {
+    for (let sx = rect.x; sx < rect.x + rect.w; sx += seg)
+      segs.push({ x: sx, y: rect.y, w: Math.min(seg, rect.x + rect.w - sx), h: rect.h });
+  } else {
+    for (let sy = rect.y; sy < rect.y + rect.h; sy += seg)
+      segs.push({ x: rect.x, y: sy, w: rect.w, h: Math.min(seg, rect.y + rect.h - sy) });
+  }
+  return segs;
+}
+
+function drawHole(hole, locked) {
+  const p = isoProject(hole.x, hole.y, 0);
+  const r = hole.r;
+  if (p.x + r * 2 < 0 || p.x - r * 2 > W || p.y + r * 2 < 0 || p.y - r * 2 > H) return;
+
+  // Draw in a squashed local frame so circles become ground-plane ellipses
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.scale(1, ISO_Y);
+  const hx = 0, hy = 0;
+
+  // Recessed dark pit with radial gradient
+  const grad = ctx.createRadialGradient(hx - r * 0.25, hy - r * 0.25, 1, hx, hy, r);
+  grad.addColorStop(0,   '#161410');
+  grad.addColorStop(0.5, '#0c0b09');
+  grad.addColorStop(1,   '#000000');
+
+  ctx.beginPath();
+  ctx.arc(hx, hy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Outer shadow rim (depth illusion)
+  ctx.beginPath();
+  ctx.arc(hx, hy, r + 3, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth   = 5;
+  ctx.stroke();
+
+  if (locked) {
+    // Grate bars covering the pit
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(hx, hy, r, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(150,150,160,0.75)';
+    ctx.lineWidth   = 4;
+    ctx.beginPath();
+    for (let off = -r; off <= r; off += r * 0.5) {
+      ctx.moveTo(hx + off, hy - r);
+      ctx.lineTo(hx + off, hy + r);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Red "locked" rim (pulsing)
+    const pulse = 0.45 + 0.25 * Math.sin(Date.now() / 300);
+    ctx.beginPath();
+    ctx.arc(hx, hy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,70,60,${pulse.toFixed(3)})`;
+    ctx.lineWidth   = 2.5;
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  // Gold/yellow warning rim
+  ctx.beginPath();
+  ctx.arc(hx, hy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,200,60,0.5)';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+
+  // Tiny highlight dot (top-left)
+  ctx.beginPath();
+  ctx.arc(hx - r * 0.35, hy - r * 0.35, r * 0.18, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fill();
+  ctx.restore();
+}
+
+// Trigger pad — circular floor plate; lights up green once activated
+function drawTrigger(t, floor) {
+  const fi = floor.index;
+  const p  = isoProject(t.x, t.y, 0);
+  if (p.x + t.r * 3 < 0 || p.x - t.r * 3 > W || p.y + t.r * 3 < 0 || p.y - t.r * 3 > H) return;
+  const active = !!gs.activated[fi][t.id];
+  const pulse  = 0.5 + 0.5 * Math.sin(Date.now() / 350);
+
+  // Squashed local frame: circles render as ground-plane ellipses
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.scale(1, ISO_Y);
+  const tx = 0, ty = 0;
+
+  // Recessed plate base
+  ctx.beginPath();
+  ctx.arc(tx, ty, t.r, 0, Math.PI * 2);
+  ctx.fillStyle = active ? 'rgba(40,90,55,0.95)' : 'rgba(0,0,0,0.30)';
+  ctx.fill();
+
+  if (active) {
+    // Glow halo
+    const glow = ctx.createRadialGradient(tx, ty, t.r * 0.4, tx, ty, t.r * 2.1);
+    glow.addColorStop(0, 'rgba(90,255,140,0.30)');
+    glow.addColorStop(1, 'rgba(90,255,140,0)');
+    ctx.beginPath();
+    ctx.arc(tx, ty, t.r * 2.1, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+  }
+
+  // Ring
+  ctx.beginPath();
+  ctx.arc(tx, ty, t.r, 0, Math.PI * 2);
+  ctx.strokeStyle = active
+    ? 'rgba(110,255,160,0.95)'
+    : `rgba(90,200,255,${(0.35 + pulse * 0.4).toFixed(3)})`;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Inner ring detail
+  ctx.beginPath();
+  ctx.arc(tx, ty, t.r * 0.62, 0, Math.PI * 2);
+  ctx.strokeStyle = active ? 'rgba(110,255,160,0.5)' : 'rgba(90,200,255,0.22)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();   // leave the squashed frame before text
+
+  // Label — sequence floors show required order; others show a dot
+  ctx.save();
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  if (floor.requireSequence) {
+    ctx.font      = 'bold 18px "Helvetica Neue", Helvetica, Arial, sans-serif';
+    ctx.fillStyle = active ? 'rgba(220,255,230,0.95)' : 'rgba(255,255,255,0.55)';
+    ctx.fillText(String(t.order + 1), p.x, p.y + 1);
+  } else {
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, 5, 5 * ISO_Y, 0, 0, Math.PI * 2);
+    ctx.fillStyle = active ? 'rgba(220,255,230,0.95)' : 'rgba(255,255,255,0.4)';
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Door in the right perimeter wall, rendered as a box in the wall gap:
+// full-height sealed slab when locked, low golden threshold when open.
+function doorBoxRect(floor) {
+  const wt = CONFIG.wallThickness;
+  const d  = floor.door;
+  return { x: floor.width - wt, y: d.center - d.width / 2, w: wt, h: d.width };
+}
+
+function drawDoorBox(floor, b, unlocked, alpha) {
+  const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+  if (unlocked) {
+    drawIsoBox(b.x, b.y, b.w, b.h, 6, '#ffe080', '#ffd24d', '#caa030', alpha);
+    // Light spill onto the floor in front of the threshold
+    ctx.save();
+    ctx.globalAlpha = alpha * (0.25 + pulse * 0.1);
+    isoQuadPath([[b.x - 70, b.y], [b.x, b.y], [b.x, b.y + b.h], [b.x - 70, b.y + b.h]], 0);
+    ctx.fillStyle = 'rgba(255,230,80,0.5)';
+    ctx.fill();
+    ctx.restore();
+  } else {
+    drawIsoBox(b.x, b.y, b.w, b.h, CONFIG.wallHeight, '#3a1c20', '#552a30', '#2a1418', alpha);
+  }
+  // Billboard label above the door
+  const p = isoProject(b.x + b.w / 2, b.y + b.h / 2, CONFIG.wallHeight + 16);
+  ctx.save();
+  ctx.globalAlpha  = alpha;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font         = 'bold 11px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.fillStyle    = unlocked ? '#ffd84d' : `rgba(255,120,110,${(0.55 + pulse * 0.4).toFixed(3)})`;
+  ctx.fillText(unlocked ? 'EXIT' : 'LOCKED', p.x, p.y);
+  ctx.restore();
+}
+function drawFloor(floor) {
+  drawFloorBase(floor);
+
+  // Flat ground-level features
+  const unlocked = exitUnlocked(floor.index);
+  for (const t of (floor.triggers || [])) drawTrigger(t, floor);
+  if (floor.hole) drawHole(floor.hole, !unlocked);
+  (floor.bridges || []).forEach((b, i) => drawBridge(b, gs.bridgeUses[gs.floor][i]));
+  drawBounceEffects();
+
+  // Raised geometry, depth-sorted with the ball (painter's algorithm)
+  const wt = CONFIG.wallThickness;
+  const wh = CONFIG.wallHeight;
+  const boxes = [];
+  const pushWall = rect => {
+    if (rect.w <= 0 || rect.h <= 0) return;
+    for (const s of wallSegments(rect)) boxes.push({ ...s, hz: wh, kind: 'wall' });
+  };
+
+  // Perimeter (left/right walls inset so corners aren't double-drawn)
+  pushWall({ x: 0, y: 0,                 w: floor.width, h: wt });
+  pushWall({ x: 0, y: floor.height - wt, w: floor.width, h: wt });
+  pushWall({ x: 0, y: wt, w: wt, h: floor.height - wt * 2 });
+  if (floor.door && floor.door.wall === 'right') {
+    const gapTop = floor.door.center - floor.door.width / 2;
+    const gapBot = floor.door.center + floor.door.width / 2;
+    pushWall({ x: floor.width - wt, y: wt,     w: wt, h: gapTop - wt });
+    pushWall({ x: floor.width - wt, y: gapBot, w: wt, h: floor.height - wt - gapBot });
+    boxes.push({ ...doorBoxRect(floor), hz: unlocked ? 6 : wh, kind: 'door' });
+  } else {
+    pushWall({ x: floor.width - wt, y: wt, w: wt, h: floor.height - wt * 2 });
+  }
+  floor.innerWalls.forEach((iw, i) => {
+    if (iw.material === 'brick') {
+      const hp = gs.wallHp[gs.floor][i];
+      if (hp <= 0) boxes.push({ x: iw.x, y: iw.y, w: iw.w, h: iw.h, hz: 7, kind: 'rubble' });
+      else         boxes.push({ x: iw.x, y: iw.y, w: iw.w, h: iw.h, hz: wh, kind: 'brick', hp });
+      return;
+    }
+    pushWall(iw);
+  });
+  for (const d of (floor.doors || [])) {
+    const st   = doorState(d);
+    const open = d.type === 'oneway' ? true
+               : d.type === 'onetime' ? !st.used
+               : gs.time <= st.openUntil;
+    boxes.push({ x: d.x, y: d.y, w: d.w, h: d.h, hz: open ? 7 : wh, kind: 'innerdoor', d, open });
+    // Unlock pads for two-way doors live on the floor plane
+    if (d.type === 'twoway') drawDoorPads(d, open);
+  }
+  for (const ps of (floor.platformStructures || []))
+    boxes.push({ x: ps.x, y: ps.y, w: ps.w, h: ps.h, hz: CONFIG.platformHeight, kind: 'platform' });
+  for (const m of (floor.movers || []))
+    boxes.push({ x: m.cx, y: m.cy, w: m.w, h: m.h, hz: 10, kind: 'mover' });
+  for (const L of (floor.launchers || []))
+    boxes.push({ x: L.x, y: L.y, w: L.w, h: L.h, hz: 26, kind: 'launcher', L });
+  for (const sw of (floor.launcherSwitches || []))
+    boxes.push({ x: sw.x, y: sw.y, w: sw.w, h: sw.h, hz: 4, kind: 'lswitch', sw });
+  for (const rp of (floor.ramps || []))
+    boxes.push({ x: rp.x, y: rp.y, w: rp.w, h: rp.h, hz: 24, kind: 'ramp', rp });
+  (floor.bridges || []).forEach((b, i) => {
+    if (gs.bridgeUses[gs.floor][i] <= 0) return;
+    // Sign posts with the remaining-crossings count at each end
+    const horiz = b.w >= b.h;
+    const posts = horiz
+      ? [{ x: b.x - 10,      y: b.y - 18 }, { x: b.x + b.w - 4, y: b.y - 18 }]
+      : [{ x: b.x - 18,      y: b.y - 10 }, { x: b.x - 18,      y: b.y + b.h - 4 }];
+    for (const p of posts)
+      boxes.push({ x: p.x, y: p.y, w: 14, h: 14, hz: 30, kind: 'post', count: gs.bridgeUses[gs.floor][i] });
+  });
+  for (const p of (floor.pickups || [])) {
+    if (gs.collected[gs.floor][p.id]) continue;
+    boxes.push({ x: p.x - 12, y: p.y - 12, w: 24, h: 24, hz: 0, kind: 'pickup', p });
+  }
+
+  const ball      = gs.ball;
+  const ballDepth = isoDepth(ball.x, ball.y);
+  const ballP     = isoProject(ball.x, ball.y, 0);
+
+  const items = boxes.map(b => ({ depth: isoDepth(b.x + b.w / 2, b.y + b.h / 2), box: b }));
+  items.push({ depth: ballDepth, ball: true });
+  items.sort((a, b) => a.depth - b.depth);
+
+  for (const it of items) {
+    if (it.ball) { drawBall(ball); continue; }
+    const b = it.box;
+
+    // Soften geometry that stands between the camera and the ball
+    let alpha = 1;
+    if (it.depth > ballDepth) {
+      const bp = isoProject(b.x + b.w / 2, b.y + b.h / 2, 0);
+      if (Math.abs(bp.x - ballP.x) < (b.w + b.h) / 2 + 60 &&
+          bp.y > ballP.y - 24 && bp.y < ballP.y + b.hz + 90) alpha = 0.45;
+    }
+
+    if (b.kind === 'door') {
+      drawDoorBox(floor, b, unlocked, alpha);
+    } else if (b.kind === 'platform') {
+      drawIsoBox(b.x, b.y, b.w, b.h, b.hz, '#5d5848', floor.wallHighlight, floor.wallShadow, alpha);
+    } else if (b.kind === 'mover') {
+      drawIsoBox(b.x, b.y, b.w, b.h, b.hz, '#4a4a52', '#5e5e68', '#2c2c32', alpha);
+    } else if (b.kind === 'brick') {
+      drawIsoBox(b.x, b.y, b.w, b.h, b.hz, '#9a5742', '#b87a60', '#5a2e22', alpha);
+      if (b.hp < 3) drawBrickCracks(b, alpha);
+    } else if (b.kind === 'rubble') {
+      drawIsoBox(b.x, b.y, b.w, b.h, b.hz, '#4a3328', '#5d4233', '#2a1c15', alpha);
+    } else if (b.kind === 'innerdoor') {
+      drawInnerDoor(b, alpha);
+    } else if (b.kind === 'launcher') {
+      drawLauncher(b.L, alpha);
+    } else if (b.kind === 'lswitch') {
+      drawLauncherSwitch(b.sw, floor, alpha);
+    } else if (b.kind === 'ramp') {
+      drawRamp(b.rp, alpha);
+    } else if (b.kind === 'post') {
+      drawIsoBox(b.x, b.y, b.w, b.h, b.hz, '#8a6a40', '#a8865a', '#503a22', alpha);
+      const tp = isoProject(b.x + b.w / 2, b.y + b.h / 2, b.hz + 12);
+      ctx.save();
+      ctx.globalAlpha  = alpha;
+      ctx.font         = 'bold 12px "Helvetica Neue", Helvetica, Arial, sans-serif';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = '#ffe6a8';
+      ctx.fillText(String(b.count), tp.x, tp.y);
+      ctx.restore();
+    } else if (b.kind === 'pickup') {
+      drawPickup(b.p);
+    } else {
+      drawIsoBox(b.x, b.y, b.w, b.h, b.hz, floor.wallColor, floor.wallHighlight, floor.wallShadow, alpha);
+    }
+  }
+}
+
+// Fracture lines on a damaged brick wall (deterministic per wall position)
+function drawBrickCracks(b, alpha) {
+  const cracks = b.hp === 2 ? 2 : 4;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = 'rgba(20,8,4,0.85)';
+  ctx.lineWidth   = 1.5;
+  for (let n = 0; n < cracks; n++) {
+    // Cheap seeded pseudo-random from wall position + crack index
+    const seed = (s) => { const v = Math.sin(b.x * 12.9898 + b.y * 78.233 + n * 37.719 + s * 9.7) * 43758.5453; return v - Math.floor(v); };
+    let wx = b.x + seed(1) * b.w;
+    let wy = b.y + seed(2) * b.h;
+    ctx.beginPath();
+    let p = isoProject(wx, wy, b.hz);
+    ctx.moveTo(p.x, p.y);
+    for (let s2 = 0; s2 < 3; s2++) {
+      wx += (seed(3 + s2) - 0.5) * Math.max(b.w, 40);
+      wy += (seed(6 + s2) - 0.5) * Math.max(b.h, 40);
+      wx = Math.max(b.x, Math.min(wx, b.x + b.w));
+      wy = Math.max(b.y, Math.min(wy, b.y + b.h));
+      // Cracks run down the wall face as well as across the top
+      const z = b.hz * Math.max(0, 1 - s2 * 0.45);
+      p = isoProject(wx, wy, z);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Flat unlock pads either side of a two-way door
+function drawDoorPads(d, open) {
+  const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 320);
+  for (const pad of doorPads(d)) {
+    const p = isoProject(pad.x, pad.y, 0);
+    if (p.x < -60 || p.x > W + 60 || p.y < -60 || p.y > H + 60) continue;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, 26, 26 * ISO_Y, 0, 0, Math.PI * 2);
+    ctx.fillStyle = open ? 'rgba(60,160,90,0.7)' : 'rgba(20,40,60,0.7)';
+    ctx.fill();
+    ctx.strokeStyle = open
+      ? 'rgba(120,255,170,0.9)'
+      : `rgba(90,200,255,${(0.4 + pulse * 0.4).toFixed(3)})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+// Doors set into inner walls: one-way / two-way (unlock each time) / one-time
+function drawInnerDoor(b, alpha) {
+  const d = b.d;
+  const COLORS = {
+    oneway:  ['#3f8f55', '#5cb076', '#235934'],
+    twoway:  ['#3a5f8a', '#5a82b0', '#1f3a58'],
+    onetime: ['#7a5a9a', '#9a7cba', '#4a3262'],
+  };
+  let cols = COLORS[d.type];
+  if (d.type === 'onetime' && !b.open) cols = ['#3a3142', '#4a4054', '#241e2c'];   // sealed
+  drawIsoBox(b.x, b.y, b.w, b.h, b.hz, cols[0], cols[1], cols[2], alpha);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  if (d.type === 'oneway') {
+    // Arrow on the threshold showing the allowed direction
+    const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+    const L = 26, Wd = 16;
+    const tip  = isoProject(cx + d.dir.x * L, cy + d.dir.y * L, b.hz + 1);
+    const w1   = isoProject(cx - d.dir.x * L * 0.4 + d.dir.y * Wd, cy - d.dir.y * L * 0.4 + d.dir.x * Wd, b.hz + 1);
+    const w2   = isoProject(cx - d.dir.x * L * 0.4 - d.dir.y * Wd, cy - d.dir.y * L * 0.4 - d.dir.x * Wd, b.hz + 1);
+    ctx.beginPath();
+    ctx.moveTo(tip.x, tip.y); ctx.lineTo(w1.x, w1.y); ctx.lineTo(w2.x, w2.y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(235,255,240,0.92)';
+    ctx.fill();
+  }
+
+  // Billboard label
+  const label = d.type === 'oneway'  ? 'ONE WAY'
+              : d.type === 'twoway'  ? (b.open ? 'OPEN' : 'UNLOCK')
+              : (b.open ? 'ONE USE' : 'SEALED');
+  const p = isoProject(d.x + d.w / 2, d.y + d.h / 2, CONFIG.wallHeight + 16);
+  ctx.font         = 'bold 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = b.open ? 'rgba(220,255,230,0.85)' : 'rgba(255,200,180,0.8)';
+  ctx.fillText(label, p.x, p.y);
+  ctx.restore();
+}
+
+// Wooden bridge planks, drawn flat on the floor plane with wear stages
+function drawBridge(b, usesLeft) {
+  if (usesLeft <= 0) return;
+  const c = isoProject(b.x + b.w / 2, b.y + b.h / 2, 0);
+  if (c.x < -400 || c.x > W + 400 || c.y < -300 || c.y > H + 300) return;
+  const wear = b.uses - usesLeft;   // 0 fresh … uses-1 nearly gone
+
+  isoQuadPath([[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]], 2);
+  ctx.fillStyle = wear === 0 ? '#8a6a40' : wear === 1 ? '#7a5c36' : '#694e2e';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(40,26,12,0.8)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  // Planks across the short axis
+  const horiz = b.w >= b.h;
+  const span  = horiz ? b.w : b.h;
+  const step  = 18;
+  ctx.strokeStyle = 'rgba(40,26,12,0.55)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  for (let s2 = step; s2 < span; s2 += step) {
+    const a = horiz ? isoProject(b.x + s2, b.y, 2)       : isoProject(b.x, b.y + s2, 2);
+    const d = horiz ? isoProject(b.x + s2, b.y + b.h, 2) : isoProject(b.x + b.w, b.y + s2, 2);
+    ctx.moveTo(a.x, a.y); ctx.lineTo(d.x, d.y);
+  }
+  ctx.stroke();
+
+  // Wear: cracks appear as the bridge weakens
+  if (wear >= 1) {
+    ctx.strokeStyle = 'rgba(15,8,4,0.7)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    for (let n = 0; n < wear * 3; n++) {
+      const fx2 = b.x + ((n * 73) % 90) / 90 * b.w;
+      const fy2 = b.y + ((n * 41) % 70) / 70 * b.h;
+      const p1 = isoProject(fx2, fy2, 2);
+      const p2 = isoProject(fx2 + 24, fy2 + 14, 2);
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    }
+    ctx.stroke();
+  }
+}
+
+// Soft ground glow shown while the ball's magnet is dragging an object
+function drawMagnetGlow(o, alpha) {
+  if (gs.time - (o._magT || -9) > 0.2) return;
+  const p   = isoProject(o.x + o.w / 2, o.y + o.h / 2, 0);
+  const rad = (o.w + o.h) * 0.62;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.scale(1, ISO_Y);
+  const g = ctx.createRadialGradient(0, 0, rad * 0.2, 0, 0, rad);
+  g.addColorStop(0, `rgba(110,200,255,${(0.35 * alpha).toFixed(3)})`);
+  g.addColorStop(1, 'rgba(110,200,255,0)');
+  ctx.beginPath();
+  ctx.arc(0, 0, rad, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.restore();
+}
+
+// Pushable spring launcher: metal box, spring plate on its active face.
+// Off (pushable, inert): orange arrow, yellow plate. On: both green, plate fires.
+function drawLauncher(L, alpha) {
+  drawMagnetGlow(L, alpha);
+  drawIsoBox(L.x, L.y, L.w, L.h, 26, '#70707c', '#8c8c9a', '#42424c', alpha);
+
+  // Spring plate slides out briefly when fired
+  const since = gs.time - L.springT;
+  const off   = since < 0.25 ? Math.sin(since / 0.25 * Math.PI) * 22 : 0;
+  const f     = L.facing;
+  const px0 = f.x > 0 ? L.x + L.w + off : f.x < 0 ? L.x - 6 - off : L.x;
+  const py0 = f.y > 0 ? L.y + L.h + off : f.y < 0 ? L.y - 6 - off : L.y;
+  const pw  = f.x !== 0 ? 6 : L.w;
+  const ph  = f.y !== 0 ? 6 : L.h;
+  if (L.on) drawIsoBox(px0, py0, pw, ph, 22, '#3cb868', '#66dc92', '#1e7038', alpha);
+  else      drawIsoBox(px0, py0, pw, ph, 22, '#e0b030', '#f0cc60', '#9a7618', alpha);
+
+  // Chevron on top showing the launch direction
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  const cx = L.x + L.w / 2, cy = L.y + L.h / 2;
+  const tip = isoProject(cx + f.x * 20, cy + f.y * 20, 27);
+  const w1  = isoProject(cx - f.x * 8 + f.y * 12, cy - f.y * 8 + f.x * 12, 27);
+  const w2  = isoProject(cx - f.x * 8 - f.y * 12, cy - f.y * 8 - f.x * 12, 27);
+  ctx.beginPath();
+  ctx.moveTo(tip.x, tip.y); ctx.lineTo(w1.x, w1.y); ctx.lineTo(w2.x, w2.y);
+  ctx.closePath();
+  ctx.fillStyle = L.on ? '#46d674' : '#e8842a';
+  ctx.fill();
+
+  // Power number: squares the ball flies after leaving a ramp
+  const np = isoProject(cx - f.x * 18, cy - f.y * 18, 27);
+  ctx.font         = 'bold 22px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = L.on ? '#bfffd4' : '#ffd9a8';
+  ctx.fillText(String(L.power), np.x, np.y);
+  ctx.restore();
+}
+
+// Launcher activation switch: squat pedestal with an indicator dome.
+// Orange while the floor's launchers are off; green once powered.
+function drawLauncherSwitch(sw, floor, alpha) {
+  const on = (floor.launchers || []).length > 0 && floor.launchers.every(L => L.on);
+  drawIsoBox(sw.x, sw.y, sw.w, sw.h, 4, '#565660', '#6e6e7a', '#34343c', alpha);
+  const cx = sw.x + sw.w / 2, cy = sw.y + sw.h / 2;
+  const p  = isoProject(cx, cy, 5);
+  const pulse = on ? 1 : 0.55 + 0.45 * Math.sin(Date.now() / 300);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y, sw.w * 0.28, sw.w * 0.28 * ISO_Y, 0, 0, Math.PI * 2);
+  ctx.fillStyle = on ? '#46d674' : `rgba(232,132,42,${pulse.toFixed(3)})`;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Ramp: wedge rising toward its launch direction
+function drawRamp(rp, alpha) {
+  drawMagnetGlow(rp, alpha);
+  const { x, y, w, h } = rp;
+  const d  = rp.dir;
+  const HZ = 24;
+  // Height of each corner: 0 at the entry edge, HZ at the take-off edge
+  const hAt = (cx, cy) => {
+    const t = d.x !== 0 ? (cx - x) / w : (cy - y) / h;
+    const k = (d.x + d.y) > 0 ? t : 1 - t;
+    return k * HZ;
+  };
+  const corners = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Support face under the high edge
+  const hi = corners.filter(([cx, cy]) => hAt(cx, cy) > 1);
+  if (hi.length === 2) {
+    const a0 = isoProject(hi[0][0], hi[0][1], 0);
+    const a1 = isoProject(hi[1][0], hi[1][1], 0);
+    const b0 = isoProject(hi[0][0], hi[0][1], HZ);
+    const b1 = isoProject(hi[1][0], hi[1][1], HZ);
+    ctx.beginPath();
+    ctx.moveTo(a0.x, a0.y); ctx.lineTo(a1.x, a1.y);
+    ctx.lineTo(b1.x, b1.y); ctx.lineTo(b0.x, b0.y);
+    ctx.closePath();
+    ctx.fillStyle = '#4a5638';
+    ctx.fill();
+  }
+
+  // Sloped top surface
+  ctx.beginPath();
+  corners.forEach(([cx, cy], i) => {
+    const p = isoProject(cx, cy, hAt(cx, cy));
+    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = '#7c8a5a';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+
+  // Direction chevrons up the slope
+  ctx.fillStyle = 'rgba(240,248,220,0.7)';
+  for (let n = 1; n <= 2; n++) {
+    const cx = x + w / 2 + d.x * (n * 14 - 14), cy = y + h / 2 + d.y * (n * 14 - 14);
+    const z  = hAt(cx, cy) + 1;
+    const tip = isoProject(cx + d.x * 10, cy + d.y * 10, z);
+    const w1  = isoProject(cx - d.x * 4 + d.y * 9, cy - d.y * 4 + d.x * 9, z);
+    const w2  = isoProject(cx - d.x * 4 - d.y * 9, cy - d.y * 4 - d.x * 9, z);
+    ctx.beginPath();
+    ctx.moveTo(tip.x, tip.y); ctx.lineTo(w1.x, w1.y); ctx.lineTo(w2.x, w2.y);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Stronger Ball pickup — floating golden orb over a pulsing ring
+function drawMagnetPickup(p) {
+  const sp = isoProject(p.x, p.y, 0);
+  if (sp.x < -60 || sp.x > W + 60 || sp.y < -60 || sp.y > H + 60) return;
+  const active = gs.time < (gs.magnetUntil || 0);
+  const pulse  = 0.5 + 0.5 * Math.sin(gs.time * 3);
+  const bob    = Math.sin(gs.time * 2.2) * 5;
+  const bx = sp.x, by = sp.y - 28 - bob;
+
+  // Orbit ring on ground plane
+  ctx.save();
+  ctx.translate(sp.x, sp.y);
+  ctx.scale(1, ISO_Y);
+  ctx.beginPath();
+  ctx.arc(0, 0, 24 + pulse * 5, 0, Math.PI * 2);
+  ctx.strokeStyle = active
+    ? `rgba(100,220,255,${(0.35 + pulse * 0.35).toFixed(3)})`
+    : `rgba(200,100,255,${(0.35 + pulse * 0.35).toFixed(3)})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // Horseshoe shape (U + two prong tips)
+  ctx.save();
+  const col = active ? '#64dcff' : '#cc66ff';
+  const hi  = active ? '#c0f6ff' : '#f0b0ff';
+  const sh  = active ? '#1a6080' : '#5a1880';
+  ctx.strokeStyle = col;
+  ctx.lineWidth   = 5;
+  ctx.lineCap     = 'round';
+  ctx.beginPath();
+  ctx.arc(bx, by, 10, Math.PI, 0, false);  // top arch
+  ctx.stroke();
+  // Left prong
+  ctx.beginPath(); ctx.moveTo(bx - 10, by); ctx.lineTo(bx - 10, by + 9); ctx.stroke();
+  // Right prong
+  ctx.beginPath(); ctx.moveTo(bx + 10, by); ctx.lineTo(bx + 10, by + 9); ctx.stroke();
+  // Prong tips in contrasting colour (the poles)
+  ctx.strokeStyle = hi;
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(bx - 10, by + 6); ctx.lineTo(bx - 10, by + 9); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx + 10, by + 6); ctx.lineTo(bx + 10, by + 9); ctx.stroke();
+  ctx.restore();
+
+  // Timer arc shows how much charge is left while active
+  if (active) {
+    const frac = Math.max(0, (gs.magnetUntil - gs.time) / CONFIG.magnetDuration);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(bx, by, 16, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2, false);
+    ctx.strokeStyle = 'rgba(100,220,255,0.6)';
+    ctx.lineWidth   = 2.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawPickup(p) {
+  if (p.type === 'magnet') { drawMagnetPickup(p); return; }
+  const sp = isoProject(p.x, p.y, 0);
+  if (sp.x < -60 || sp.x > W + 60 || sp.y < -60 || sp.y > H + 60) return;
+  const pulse = 0.5 + 0.5 * Math.sin(gs.time * 3);
+  const bob   = Math.sin(gs.time * 2.2) * 4;
+
+  ctx.beginPath();
+  ctx.ellipse(sp.x, sp.y, 22 + pulse * 5, (22 + pulse * 5) * ISO_Y, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(255,200,80,${(0.35 + pulse * 0.35).toFixed(3)})`;
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+
+  const oy = sp.y - 22 - bob;
+  const grad = ctx.createRadialGradient(sp.x - 3, oy - 4, 0, sp.x, oy, 11);
+  grad.addColorStop(0, '#fff3c8');
+  grad.addColorStop(0.5, '#ffce50');
+  grad.addColorStop(1, '#a87410');
+  ctx.beginPath();
+  ctx.arc(sp.x, oy, 11, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+function drawBall(ball) {
+  if (gs.dying) { drawDyingBall(); return; }
+  const r = CONFIG.ballRadius;
+  const g = isoProject(ball.x, ball.y, 0);
+  if (g.x < -60 || g.x > W + 60 || g.y < -60 || g.y > H + 60) return;
+
+  // Ground shadow stays on the floor plane even when the ball is airborne
+  ctx.beginPath();
+  ctx.ellipse(g.x, g.y, r * 0.85, r * 0.85 * ISO_Y, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.fill();
+
+  // Sphere centre floats ball-radius above its ground point (+ jump height)
+  const bx = g.x;
+  const by = g.y - r * 0.9 - (ball.z || 0);
+
+  // Magnet aura — blue-cyan glow, pulses faster when nearly expired
+  if (gs.time < (gs.magnetUntil || 0)) {
+    const secsLeft = gs.magnetUntil - gs.time;
+    const rate  = secsLeft < 5 ? 12 : 5;   // pulse quickens in final 5 s
+    const pulse = 0.5 + 0.5 * Math.sin(gs.time * rate);
+    const aura  = ctx.createRadialGradient(bx, by, r * 0.6, bx, by, r * 2.2);
+    aura.addColorStop(0, `rgba(80,200,255,${(0.30 + pulse * 0.25).toFixed(3)})`);
+    aura.addColorStop(1, 'rgba(80,200,255,0)');
+    ctx.beginPath();
+    ctx.arc(bx, by, r * 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = aura;
+    ctx.fill();
+  }
+
+  // Stronger Ball aura
+  if (gs.strongBall) {
+    const pulse = 0.5 + 0.5 * Math.sin(gs.time * 5);
+    const aura = ctx.createRadialGradient(bx, by, r * 0.6, bx, by, r * 2);
+    aura.addColorStop(0, `rgba(255,190,60,${(0.30 + pulse * 0.2).toFixed(3)})`);
+    aura.addColorStop(1, 'rgba(255,190,60,0)');
+    ctx.beginPath();
+    ctx.arc(bx, by, r * 2, 0, Math.PI * 2);
+    ctx.fillStyle = aura;
+    ctx.fill();
+  }
+
+  // Ball body — warm off-white marble gradient
+  const body = ctx.createRadialGradient(bx - r * 0.32, by - r * 0.32, 0, bx, by, r);
+  body.addColorStop(0,    '#e8e2d4');
+  body.addColorStop(0.35, '#cfc6af');
+  body.addColorStop(0.72, '#a09070');
+  body.addColorStop(1,    '#5a5040');
+
+  ctx.beginPath();
+  ctx.arc(bx, by, r, 0, Math.PI * 2);
+  ctx.fillStyle = body;
+  ctx.fill();
+
+  // Bright specular highlight (top-left catch light)
+  const spec = ctx.createRadialGradient(bx - r * 0.28, by - r * 0.38, 0, bx - r * 0.15, by - r * 0.15, r * 0.6);
+  spec.addColorStop(0,   'rgba(255,255,255,0.92)');
+  spec.addColorStop(0.35,'rgba(255,255,255,0.35)');
+  spec.addColorStop(1,   'rgba(255,255,255,0)');
+
+  ctx.beginPath();
+  ctx.arc(bx, by, r, 0, Math.PI * 2);
+  ctx.fillStyle = spec;
+  ctx.fill();
+
+  // Thin rim
+  ctx.beginPath();
+  ctx.arc(bx, by, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+}
+
+// Death animation: pit = sink & shrink into the dark; lava = flash, then ash pile
+function drawDyingBall() {
+  const d = gs.dying;
+  const r = CONFIG.ballRadius;
+  const g = isoProject(d.x, d.y, 0);
+  const k = Math.min(1, d.t / 0.9);   // 0 → 1 over the animation
+
+  if (d.type === 'pit') {
+    const scale = 1 - k;
+    if (scale <= 0.02) return;
+    const by = g.y - r * 0.9 * scale + k * 26;   // sinks below the floor plane
+    ctx.save();
+    ctx.globalAlpha = 1 - k * 0.85;
+    const body = ctx.createRadialGradient(g.x - r * 0.3 * scale, by - r * 0.3 * scale, 0, g.x, by, r * scale);
+    body.addColorStop(0, '#9a9284');
+    body.addColorStop(1, '#1c1812');
+    ctx.beginPath();
+    ctx.arc(g.x, by, r * scale, 0, Math.PI * 2);
+    ctx.fillStyle = body;
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
+  // Lava
+  if (k < 0.35) {
+    // White-hot flash before the marble is consumed
+    const flash = 1 - k / 0.35;
+    const by = g.y - r * 0.9;
+    ctx.beginPath();
+    ctx.arc(g.x, by, r * (1 + (1 - flash) * 0.4), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,${Math.round(140 + flash * 115)},${Math.round(60 + flash * 195)},0.95)`;
+    ctx.fill();
+  } else {
+    // Small pile of black ash
+    const grow = Math.min(1, (k - 0.35) / 0.3);
+    ctx.beginPath();
+    ctx.ellipse(g.x, g.y, r * 1.05 * grow, r * 0.45 * grow * ISO_Y * 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#15120e';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(g.x, g.y - 3 * grow, r * 0.55 * grow, r * 0.3 * grow, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#0b0908';
+    ctx.fill();
+    // Fading embers in the pile
+    const ember = Math.max(0, 1 - (d.t - 0.65) / 0.8);
+    if (ember > 0) {
+      for (let i = 0; i < 3; i++) {
+        const ex = g.x + Math.sin(i * 2.4 + 1) * r * 0.4;
+        const ey = g.y - 2 + Math.cos(i * 1.7) * r * 0.15;
+        ctx.beginPath();
+        ctx.arc(ex, ey, 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,120,40,${(ember * (0.5 + 0.5 * Math.sin(gs.time * 9 + i * 2))).toFixed(3)})`;
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function drawJoystickHUD() {
+  if (!joy.active) return;
+
+  const bx  = joy.baseX;
+  const by  = joy.baseY;
+  const MAX = CONFIG.joystickRadius;
+  const hx  = bx + joy.dx * MAX;
+  const hy  = by + joy.dy * MAX;
+  const mag = Math.hypot(joy.dx, joy.dy);
+
+  // Max-range ring (shows input boundary)
+  ctx.beginPath();
+  ctx.arc(bx, by, MAX, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+
+  // Line from anchor to handle
+  if (mag > 0.05) {
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(hx, hy);
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+  }
+
+  // Anchor dot
+  ctx.beginPath();
+  ctx.arc(bx, by, 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fill();
+
+  // Handle dot (brightens with deflection magnitude)
+  ctx.beginPath();
+  ctx.arc(hx, hy, 13, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(255,255,255,${(0.22 + mag * 0.18).toFixed(2)})`;
+  ctx.fill();
+  ctx.strokeStyle = `rgba(255,255,255,${(0.35 + mag * 0.25).toFixed(2)})`;
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+}
+
+function drawPauseHUD() {
+  const { cx, cy, r } = PAUSE_GFX;
+  const paused = gs && gs.paused;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle   = paused ? 'rgba(255,185,0,0.30)' : 'rgba(255,255,255,0.09)';
+  ctx.fill();
+  ctx.strokeStyle = paused ? 'rgba(255,185,0,0.75)' : 'rgba(255,255,255,0.22)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle    = paused ? '#ffb800' : 'rgba(255,255,255,0.65)';
+  ctx.font         = 'bold 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(paused ? 'GO' : 'HOLD', cx, cy);
+  ctx.textBaseline = 'alphabetic';
+}
+
+function toggleMap() {
+  if (!gs || gs.ended) return;
+  gs.mapOpen = !gs.mapOpen;
+  const btn = document.getElementById('map-btn');
+  btn.textContent = gs.mapOpen ? 'RESUME' : 'MAP';
+  btn.classList.toggle('open', gs.mapOpen);
+}
+
+function drawMapOverlay(alpha) {
+  const floor  = floors[gs.floor];
+  const PAD    = 28;
+  const HDR    = 44;   // header height (title)
+  const LEG    = 32;   // legend height below map
+
+  const availW = W - PAD * 2;
+  const availH = H - PAD * 2 - HDR - LEG;
+  const scale  = Math.min(availW / floor.width, availH / floor.height);
+
+  const mapW = floor.width  * scale;
+  const mapH = floor.height * scale;
+  const mapX = Math.round((W - mapW) / 2);
+  const mapY = Math.round(PAD + HDR);
+  const wt   = Math.max(2, CONFIG.wallThickness * scale);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Dark scrim
+  ctx.fillStyle = 'rgba(0,0,0,0.86)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Panel background
+  ctx.fillStyle = 'rgba(18,20,28,0.97)';
+  ctx.fillRect(mapX - 10, mapY - 10, mapW + 20, mapH + 20 + LEG);
+
+  // Floor field
+  ctx.fillStyle = floor.tileColor;
+  ctx.fillRect(mapX, mapY, mapW, mapH);
+
+  // Subtle tile grid on map
+  ctx.strokeStyle = floor.tileLineColor;
+  ctx.lineWidth   = 0.5;
+  const gridStep = Math.round(CONFIG.tileSize * scale);
+  if (gridStep > 4) {
+    ctx.beginPath();
+    for (let gx = mapX; gx <= mapX + mapW; gx += gridStep) {
+      ctx.moveTo(gx, mapY); ctx.lineTo(gx, mapY + mapH);
+    }
+    for (let gy = mapY; gy <= mapY + mapH; gy += gridStep) {
+      ctx.moveTo(mapX, gy); ctx.lineTo(mapX + mapW, gy);
+    }
+    ctx.stroke();
+  }
+
+  // Walls — helper to fill a wall rect
+  function mwall(wx, wy, ww, wh) {
+    ctx.fillStyle = floor.wallColor;
+    ctx.fillRect(mapX + wx * scale, mapY + wy * scale, ww * scale, wh * scale);
+  }
+  const fw = floor.width, fh = floor.height, WT = CONFIG.wallThickness;
+  const unlocked = exitUnlocked(gs.floor);
+  mwall(0, 0, fw, WT);                    // top
+  mwall(0, fh - WT, fw, WT);             // bottom
+  mwall(0, 0, WT, fh);                   // left
+  if (floor.door && floor.door.wall === 'right') {
+    const gapTop = floor.door.center - floor.door.width / 2;
+    const gapBot = floor.door.center + floor.door.width / 2;
+    mwall(fw - WT, 0,      WT, gapTop);
+    mwall(fw - WT, gapBot, WT, fh - gapBot);
+    // Door gap highlight — gold when open, red when sealed
+    ctx.fillStyle = unlocked ? '#ffcc22' : '#cc3333';
+    ctx.fillRect(mapX + (fw - WT) * scale, mapY + gapTop * scale,
+                 Math.max(wt, 3), (gapBot - gapTop) * scale);
+  } else {
+    mwall(fw - WT, 0, WT, fh);           // right (solid)
+  }
+
+  // Surface tiles (under walls/triggers so hazards read clearly)
+  if (floor.tiles) {
+    const ts = CONFIG.tileSize;
+    const TILE_COLORS = { mud1: '#73583a', mud2: '#5d452c', mud3: '#44311d', ice: '#a9cfdf', lava: '#d04812', pit: '#000000' };
+    for (const key in floor.tiles) {
+      const ci = key.indexOf(',');
+      const c  = +key.slice(0, ci), r = +key.slice(ci + 1);
+      ctx.fillStyle = TILE_COLORS[floor.tiles[key]];
+      ctx.fillRect(mapX + c * ts * scale, mapY + r * ts * scale, ts * scale + 0.5, ts * scale + 0.5);
+    }
+  }
+
+  // Moving platforms — track line + current position
+  for (const m of (floor.movers || [])) {
+    ctx.strokeStyle = 'rgba(170,170,190,0.4)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(mapX + (m.x1 + m.w / 2) * scale, mapY + (m.y1 + m.h / 2) * scale);
+    ctx.lineTo(mapX + (m.x2 + m.w / 2) * scale, mapY + (m.y2 + m.h / 2) * scale);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#4a4a52';
+    ctx.strokeStyle = 'rgba(200,200,215,0.8)';
+    ctx.fillRect(mapX + m.cx * scale, mapY + m.cy * scale, m.w * scale, m.h * scale);
+    ctx.strokeRect(mapX + m.cx * scale, mapY + m.cy * scale, m.w * scale, m.h * scale);
+  }
+
+  // Inner maze walls (brick shown in its own colour, breached bricks as gaps)
+  floor.innerWalls.forEach((iw, i) => {
+    if (iw.material === 'brick') {
+      if (gs.wallHp[gs.floor][i] <= 0) return;
+      ctx.fillStyle = '#9a5742';
+      ctx.fillRect(mapX + iw.x * scale, mapY + iw.y * scale, iw.w * scale, iw.h * scale);
+      return;
+    }
+    mwall(iw.x, iw.y, iw.w, iw.h);
+  });
+
+  // Inner doors
+  const DOOR_MAP_COLORS = { oneway: '#4fbf6f', twoway: '#5a8fd0', onetime: '#a87cd8' };
+  for (const d of (floor.doors || [])) {
+    const st = doorState(d);
+    ctx.fillStyle = (d.type === 'onetime' && st.used) ? '#3a3142' : DOOR_MAP_COLORS[d.type];
+    ctx.fillRect(mapX + d.x * scale, mapY + d.y * scale,
+                 Math.max(2.5, d.w * scale), Math.max(2.5, d.h * scale));
+  }
+
+  // Items
+  (floor.bridges || []).forEach((b, i) => {
+    if (gs.bridgeUses[gs.floor][i] <= 0) return;
+    ctx.fillStyle = '#8a6a40';
+    ctx.fillRect(mapX + b.x * scale, mapY + b.y * scale, b.w * scale, b.h * scale);
+  });
+  for (const L of (floor.launchers || [])) {
+    ctx.fillStyle = L.on ? '#46d674' : '#e8842a';
+    ctx.fillRect(mapX + L.x * scale, mapY + L.y * scale, Math.max(3, L.w * scale), Math.max(3, L.h * scale));
+  }
+  for (const sw of (floor.launcherSwitches || [])) {
+    const on = (floor.launchers || []).length > 0 && floor.launchers.every(L => L.on);
+    ctx.fillStyle   = on ? '#46d674' : '#e8842a';
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth   = 1;
+    const sx = mapX + sw.x * scale, sy = mapY + sw.y * scale;
+    const ss = Math.max(3, sw.w * scale);
+    ctx.fillRect(sx, sy, ss, ss);
+    ctx.strokeRect(sx, sy, ss, ss);
+  }
+  for (const rp of (floor.ramps || [])) {
+    ctx.fillStyle = '#7c8a5a';
+    ctx.fillRect(mapX + rp.x * scale, mapY + rp.y * scale, Math.max(3, rp.w * scale), Math.max(3, rp.h * scale));
+  }
+  for (const p of (floor.pickups || [])) {
+    if (gs.collected[gs.floor][p.id]) continue;
+    ctx.beginPath();
+    ctx.arc(mapX + p.x * scale, mapY + p.y * scale, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffce50';
+    ctx.fill();
+  }
+
+  // Trigger pads
+  for (const t of (floor.triggers || [])) {
+    const txm = mapX + t.x * scale;
+    const tym = mapY + t.y * scale;
+    const trm = Math.max(4, t.r * scale);
+    const active = !!gs.activated[gs.floor][t.id];
+    ctx.beginPath();
+    ctx.arc(txm, tym, trm, 0, Math.PI * 2);
+    ctx.fillStyle = active ? 'rgba(90,220,130,0.9)' : 'rgba(20,30,40,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = active ? 'rgba(140,255,180,1)' : 'rgba(90,200,255,0.8)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+    if (floor.requireSequence) {
+      ctx.fillStyle    = active ? 'rgba(10,30,15,0.9)' : 'rgba(255,255,255,0.7)';
+      ctx.font         = `bold ${Math.max(8, Math.round(trm * 1.1))}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(t.order + 1), txm, tym + 0.5);
+    }
+  }
+
+  // Hole
+  if (floor.hole) {
+    const hx = mapX + floor.hole.x * scale;
+    const hy = mapY + floor.hole.y * scale;
+    const hr = Math.max(5, floor.hole.r * scale);
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+    ctx.fillStyle = '#050403';
+    ctx.fill();
+    ctx.strokeStyle = unlocked ? 'rgba(255,200,60,0.7)' : 'rgba(255,80,70,0.85)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+  }
+
+  // View indicator — approximate visible region, rotated with the camera
+  ctx.save();
+  ctx.translate(mapX + gs.camera.x * scale, mapY + gs.camera.y * scale);
+  ctx.rotate(-viewAngle());
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([3, 3]);
+  const vw = W * scale, vh = (H / ISO_Y) * scale;
+  ctx.strokeRect(-vw / 2, -vh / 2, vw, vh);
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Compass — which way the camera is facing (N = world up)
+  ctx.save();
+  ctx.translate(mapX + mapW - 18, mapY + 18);
+  ctx.rotate(viewAngle());
+  ctx.fillStyle = 'rgba(255,160,60,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(0, -10); ctx.lineTo(5, 6); ctx.lineTo(0, 2); ctx.lineTo(-5, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Ball marker (pulsing ring + dot)
+  const bx  = mapX + gs.ball.x * scale;
+  const by  = mapY + gs.ball.y * scale;
+  const br  = Math.max(5, CONFIG.ballRadius * scale);
+  const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 280);
+  ctx.beginPath();
+  ctx.arc(bx, by, br + pulse * 4, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(255,255,255,${0.28 * pulse})`;
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bx, by, br, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // Start position crosshair
+  ctx.strokeStyle = 'rgba(100,220,100,0.4)';
+  ctx.lineWidth   = 1;
+  const sx = mapX + floor.startX * scale;
+  const sy = mapY + floor.startY * scale;
+  ctx.beginPath();
+  ctx.moveTo(sx - 5, sy); ctx.lineTo(sx + 5, sy);
+  ctx.moveTo(sx, sy - 5); ctx.lineTo(sx, sy + 5);
+  ctx.stroke();
+
+  // Title
+  ctx.fillStyle    = 'rgba(255,255,255,0.88)';
+  ctx.font         = '600 13px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(floor.label.toUpperCase() + ' — MAP', W / 2, PAD + HDR / 2);
+
+  // Legend row
+  const legY = mapY + mapH + LEG / 2;
+  ctx.font         = '11px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign    = 'left';
+  let lx = mapX + 4;
+
+  // You (ball)
+  ctx.beginPath();
+  ctx.arc(lx + 5, legY, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('You', lx + 14, legY);
+  lx += 52;
+
+  // Start
+  ctx.strokeStyle = 'rgba(100,220,100,0.6)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.moveTo(lx, legY); ctx.lineTo(lx + 10, legY);
+  ctx.moveTo(lx + 5, legY - 5); ctx.lineTo(lx + 5, legY + 5);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('Start', lx + 14, legY);
+  lx += 58;
+
+  if (floor.triggers && floor.triggers.length) {
+    ctx.beginPath();
+    ctx.arc(lx + 5, legY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20,30,40,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(90,200,255,0.8)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('Trigger', lx + 14, legY);
+    lx += 68;
+  }
+
+  if (floor.hole) {
+    ctx.beginPath();
+    ctx.arc(lx + 5, legY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#050403';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,60,0.8)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('Hole', lx + 14, legY);
+    lx += 52;
+  }
+
+  const hasHazard = floor.tiles && Object.keys(floor.tiles).some(k => floor.tiles[k] === 'lava' || floor.tiles[k] === 'pit');
+  if (hasHazard) {
+    ctx.fillStyle = '#d04812';
+    ctx.fillRect(lx, legY - 5, 5, 10);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(lx + 5, legY - 5, 5, 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('Hazard', lx + 14, legY);
+    lx += 70;
+  }
+
+  if (floor.door) {
+    ctx.fillStyle = '#ffcc22';
+    ctx.fillRect(lx, legY - 5, 8, 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('Exit', lx + 12, legY);
+  }
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+}
+
+function drawFadeOverlay() {
+  let alpha = 0;
+  if (gs.transitioning) alpha = gs.transAlpha;
+  if (gs.ended)         alpha = Math.max(alpha, gs.endFade);
+  if (alpha <= 0) return;
+  ctx.fillStyle = `rgba(0,0,0,${alpha.toFixed(3)})`;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ── UI helpers ───────────────────────────────────────────────────
+function updateFloorLabel() {
+  const f = floors[gs.floor];
+  let txt = f.label;
+  if (f.triggers && f.triggers.length) {
+    const n = f.requireSequence ? gs.seqProgress : activatedCount(gs.floor);
+    if (exitUnlocked(gs.floor)) {
+      txt += '  ·  UNLOCKED';
+    } else {
+      txt += `  ·  ${n}/${f.triggers.length}` + (f.requireSequence ? ' IN ORDER' : ' TRIGGERS');
+    }
+  }
+  document.getElementById('floor-label').textContent = txt;
+}
+
+let hintVisible = true;
+function hideHint() {
+  if (!hintVisible) return;
+  hintVisible = false;
+  const el = document.getElementById('hint');
+  if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 1100); }
+}
+
+// ── Resize ───────────────────────────────────────────────────────
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width  = W;
+  canvas.height = H;
+  resizeControls();
+  buildFloors();
+  if (gs) {
+    // Clamp ball inside new floor, snap camera
+    const f = floors[gs.floor];
+    const wt = CONFIG.wallThickness, r = CONFIG.ballRadius;
+    gs.ball.x = Math.max(wt + r, Math.min(gs.ball.x, f.width  - wt - r));
+    gs.ball.y = Math.max(wt + r, Math.min(gs.ball.y, f.height - wt - r));
+    snapCamera();
+    updateFloorLabel();
+  }
+}
+
+// ── Main loop ────────────────────────────────────────────────────
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (!gs) return;
+
+  const dt = lastTime ? Math.min((now - lastTime) / 1000, 0.05) : 0;
+  lastTime = now;
+
+  // Animate map overlay in/out
+  const MAP_SPEED = 5;
+  if (gs.mapOpen)       gs.mapAlpha = Math.min(1, gs.mapAlpha + MAP_SPEED * dt);
+  else                  gs.mapAlpha = Math.max(0, gs.mapAlpha - MAP_SPEED * dt);
+
+  updateBounceEffects(dt);
+  updateTransition(dt);
+  updateEndFade(dt);
+  updateView(dt);
+  updateDeath(dt);
+  updateDeathFx(dt);
+  if (!gs.ended) updatePhysics(dt);
+  if (!gs.mapOpen && !gs.dying) updateCamera(dt);
+  updateTimerLabel();
+
+  // ── Render
+  const floor = floors[gs.floor];
+
+  // bg
+  ctx.fillStyle = floor.bgColor;
+  ctx.fillRect(0, 0, W, H);
+
+  drawFloor(floor);   // ground, features, walls and ball, depth-sorted
+  drawDeathFx();
+
+  // Surface debug label
+  if (CONFIG.showSurfaceDebug && gs.surface !== undefined) {
+    const SURF_LABELS  = { floor: 'Floor', platform: 'Platform', mud1: 'Thin Mud', mud2: 'Mud', mud3: 'Deep Mud', ice: 'Ice', mover: 'Moving platform', bridge: 'Wooden bridge' };
+    const SURF_COLORS  = { floor: 'rgba(255,255,255,0.42)', platform: '#88ddff', mud1: '#d9b88a', mud2: '#c9a36a', mud3: '#a87f48', ice: '#bfe6f5', mover: '#aaaabe', bridge: '#d8b070' };
+    const txt   = SURF_LABELS[gs.surface] || gs.surface;
+    const color = SURF_COLORS[gs.surface] || 'white';
+    ctx.save();
+    ctx.font         = 'bold 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(txt).width + 22;
+    const lx = W / 2, ly = 96;   // below the floor label and run timer
+    ctx.fillStyle = 'rgba(0,0,0,0.48)';
+    ctx.fillRect(lx - tw / 2, ly - 11, tw, 22);
+    ctx.fillStyle = color;
+    ctx.fillText(txt, lx, ly);
+    ctx.restore();
+  }
+
+  drawJoystickHUD();
+  drawPauseHUD();
+  if (gs.mapAlpha > 0) drawMapOverlay(gs.mapAlpha);
+  drawFadeOverlay();
+}
+
+// ── Settings panel ───────────────────────────────────────────────
+function initAdmin() {
+  // Migrate the old tmSens key (joy/tilt only) into tmSettings
+  let saved = JSON.parse(localStorage.getItem('tmSettings') || 'null');
+  if (!saved) {
+    const old = JSON.parse(localStorage.getItem('tmSens') || '{}');
+    saved = { joy: old.joy, tilt: old.tilt };
+    localStorage.removeItem('tmSens');
+  }
+  // Code defaults for the advanced feel values, captured before saved
+  // overrides land, so Reset Advanced restores them
+  const advKeys = ['acceleration', 'maxSpeed', 'friction', 'idleFriction', 'brakeBoost',
+                   'joyResponse', 'joyDiagSpeed', 'joyDiagResponse'];
+  const advDefaults = {};
+  for (const k of advKeys) advDefaults[k] = CONFIG[k];
+
+  if (saved.joy      != null) CONFIG.joystickSensitivity = saved.joy;
+  if (saved.tilt     != null) CONFIG.tiltSensitivity     = saved.tilt;
+  if (saved.bounce   != null) CONFIG.wallBounce          = saved.bounce;
+  if (saved.sfx      != null) CONFIG.sfxVolume           = saved.sfx;
+  if (saved.music    != null) CONFIG.musicVolume         = saved.music;
+  if (saved.accel    != null) CONFIG.acceleration        = saved.accel;
+  if (saved.max      != null) CONFIG.maxSpeed            = saved.max;
+  if (saved.fric     != null) CONFIG.friction            = saved.fric;
+  if (saved.idleFric != null) CONFIG.idleFriction        = saved.idleFric;
+  if (saved.brake    != null) CONFIG.brakeBoost          = saved.brake;
+  if (saved.snap8    != null) CONFIG.joystickSnap8       = saved.snap8;
+  if (saved.joyResp  != null) CONFIG.joyResponse         = saved.joyResp;
+  if (saved.diagSpd  != null) CONFIG.joyDiagSpeed        = saved.diagSpd;
+  if (saved.diagResp   != null) CONFIG.joyDiagResponse  = saved.diagResp;
+  if (saved.magnetDur  != null) CONFIG.magnetDuration   = saved.magnetDur;
+
+  function save() {
+    localStorage.setItem('tmSettings', JSON.stringify({
+      joy:      CONFIG.joystickSensitivity,
+      tilt:     CONFIG.tiltSensitivity,
+      bounce:   CONFIG.wallBounce,
+      sfx:      CONFIG.sfxVolume,
+      music:    CONFIG.musicVolume,
+      accel:    CONFIG.acceleration,
+      max:      CONFIG.maxSpeed,
+      fric:     CONFIG.friction,
+      idleFric: CONFIG.idleFriction,
+      brake:    CONFIG.brakeBoost,
+      snap8:    CONFIG.joystickSnap8,
+      joyResp:  CONFIG.joyResponse,
+      diagSpd:  CONFIG.joyDiagSpeed,
+      diagResp:  CONFIG.joyDiagResponse,
+      magnetDur: CONFIG.magnetDuration,
+    }));
+  }
+
+  // [slider id, value label id, CONFIG key, decimals shown]
+  const sliders = [
+    ['joy-sens-sl',   'joy-sens-val',   'joystickSensitivity', 1],
+    ['tilt-sens-sl',  'tilt-sens-val',  'tiltSensitivity',     1],
+    ['bounce-sl',     'bounce-val',     'wallBounce',          2],
+    ['sfx-sl',        'sfx-val',        'sfxVolume',           2],
+    ['music-sl',      'music-val',      'musicVolume',         2],
+    ['accel-sl',      'accel-val',      'acceleration',        0],
+    ['max-speed-sl',  'max-speed-val',  'maxSpeed',            0],
+    ['fric-sl',       'fric-val',       'friction',            3],
+    ['idle-fric-sl',  'idle-fric-val',  'idleFriction',        3],
+    ['brake-sl',      'brake-val',      'brakeBoost',          1],
+    ['joy-resp-sl',   'joy-resp-val',   'joyResponse',         1],
+    ['diag-speed-sl', 'diag-speed-val', 'joyDiagSpeed',        2],
+    ['diag-resp-sl',  'diag-resp-val',  'joyDiagResponse',     1],
+    ['magnet-dur-sl', 'magnet-dur-val', 'magnetDuration',      0],
+  ];
+  function refreshSliders() {
+    for (const [slId, valId, key, dec] of sliders) {
+      document.getElementById(slId).value = CONFIG[key];
+      document.getElementById(valId).textContent = CONFIG[key].toFixed(dec);
+    }
+  }
+  refreshSliders();
+  for (const [slId, valId, key, dec] of sliders) {
+    const sl  = document.getElementById(slId);
+    const val = document.getElementById(valId);
+    sl.addEventListener('input', () => {
+      CONFIG[key] = parseFloat(sl.value);
+      val.textContent = CONFIG[key].toFixed(dec);
+      save();
+    });
+  }
+
+  const snap8cb = document.getElementById('snap8-cb');
+  snap8cb.checked = CONFIG.joystickSnap8;
+  snap8cb.addEventListener('change', () => {
+    CONFIG.joystickSnap8 = snap8cb.checked;
+    save();
+  });
+
+  document.getElementById('adv-toggle').addEventListener('click', () => {
+    document.getElementById('adv-toggle').classList.toggle('open');
+    document.getElementById('adv-section').classList.toggle('open');
+  });
+  document.getElementById('adv-reset').addEventListener('click', () => {
+    for (const k of advKeys) CONFIG[k] = advDefaults[k];
+    refreshSliders();
+    save();
+  });
+
+  document.getElementById('admin-btn').addEventListener('click', toggleAdmin);
+  document.getElementById('admin-done').addEventListener('click', toggleAdmin);
+}
+
+function toggleAdmin() {
+  const panel = document.getElementById('admin-panel');
+  const btn   = document.getElementById('admin-btn');
+  const open  = panel.style.display !== 'block';
+  panel.style.display = open ? 'block' : 'none';
+  btn.classList.toggle('open', open);
+  if (gs) gs.paused = open;
+}
+
+// ── Bootstrap ────────────────────────────────────────────────────
+window.addEventListener('resize', resize);
+
+document.getElementById('reset-btn').addEventListener('click', resetGame);
+document.getElementById('play-again-btn').addEventListener('click', resetGame);
+document.getElementById('tilt-btn').addEventListener('click', enableTilt);
+document.getElementById('map-btn').addEventListener('click', toggleMap);
+document.getElementById('rot-left-btn').addEventListener('click', () => rotateView(-1));
+document.getElementById('rot-right-btn').addEventListener('click', () => rotateView(1));
+document.getElementById('death-restart').addEventListener('click', restartFloor);
+document.getElementById('death-newgame').addEventListener('click', () => { hideDeathUI(); resetGame(); });
+document.getElementById('death-quit').addEventListener('click', () => {
+  hideDeathUI();
+  document.getElementById('title-screen').style.display = 'flex';
+});
+document.getElementById('title-play').addEventListener('click', () => {
+  document.getElementById('title-screen').style.display = 'none';
+  resetGame();
+});
+
+resize();
+initAdmin();
+gs = createGS();
+updateFloorLabel();
+snapCamera();
+requestAnimationFrame(loop);
+</script>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "1ee4fae2db864f6fa25d35f1130e2dfa"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
